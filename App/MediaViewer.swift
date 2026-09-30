@@ -16,7 +16,7 @@ struct MediaViewer: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-                .opacity(1 - min(abs(dragOffset) / 400, 0.6))
+                .opacity(backgroundOpacity)
 
             TabView(selection: $index) {
                 ForEach(Array(bundle.items.enumerated()), id: \.element.id) { i, item in
@@ -55,6 +55,11 @@ struct MediaViewer: View {
         .statusBarHidden(!chromeVisible)
         .onAppear { index = startIndex }
         .sensoryFeedback(.selection, trigger: index) { _, _ in settings.haptics }
+    }
+
+    private var backgroundOpacity: Double {
+        let fade: CGFloat = min(abs(dragOffset) / CGFloat(400), CGFloat(0.6))
+        return Double(1 - fade)
     }
 
     private var currentItem: MediaItem? {
