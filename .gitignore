@@ -1,0 +1,6 @@
+build/
+Payload/
+*.ipa
+build-ipa.log
+xcuserdata/
+.DS_Store
