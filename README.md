@@ -1,66 +1,64 @@
-# IGSaver
+# Keepsake
 
-A personal iPhone app: paste an Instagram post, reel, story or highlight link, then save the photos and videos to your Photos library.
+A personal iPhone app that saves photos and videos from Instagram, Threads and Facebook to your Photos library. (The Xcode target is still called `IGSaver`; the app shows up as **Keepsake**.)
 
-## What it handles
+## What it saves
 
-| Link | Example | Login needed? |
+| Platform | Supported | Login |
 |---|---|---|
-| Post (single or carousel) | `instagram.com/p/ABC123…` | No for public accounts (best effort), yes for private accounts you follow |
-| Reel / IGTV | `instagram.com/reel/ABC123…` | Same as posts |
-| Story (one, or all current) | `instagram.com/stories/username/3456…` | Yes |
-| Highlight | `instagram.com/stories/highlights/1789…` or `instagram.com/s/…` | Yes |
-| Share links | `instagram.com/share/…` | Resolved automatically |
+| Instagram | Posts, carousels, reels, stories, highlights, `/share/` links | Needed for stories, highlights and private accounts you follow |
+| Threads | Public posts: photos, videos, carousels | Not needed |
+| Facebook | Public reels, videos, photos, `fb.watch` and `/share/` links | Not needed. Stories and private posts aren't available |
 
-You can paste the whole shared text. The app finds the link in it and ignores the rest.
+## Features
 
-## Install on your iPhone (one-time, about 10 minutes)
+- **Share sheet:** tap Share › Keepsake in any of the three apps. It saves right away, or shows a preview first if you turn off "Save automatically".
+- **Best available quality:**
+  - Downloads the highest-resolution video stream and merges it with the audio (no re-encoding).
+  - Falls back to the standard file automatically if merging fails.
+  - AV1 video is only used on iPhones that decode it in hardware.
+- **Wi-Fi only:** downloads won't use mobile data, and Settings shows your current connection.
+- **Dynamic Island and Lock Screen progress** for saves started in the app.
+- **Library** of everything you saved, including share-sheet saves:
+  - Search and filter by platform.
+  - Open the original post, save again, or open Photos.
+- **Optional "Keepsake" album** in Photos.
+- **Deep link for Shortcuts:** `keepsake://save?url=<link>`.
 
-You need **Xcode 16 or newer** on the Mac.
+## Building
 
-1. **Open the project.** Double-click `IGSaver.xcodeproj`.
-2. **Add your Apple ID to Xcode** if you haven't already. Go to Xcode › Settings › Accounts, then click **+** and choose Apple ID.
-3. **Set signing.**
-   - In the left sidebar, click the blue **IGSaver** project icon.
-   - Select the **IGSaver** target, then open the **Signing & Capabilities** tab.
-   - Under **Team**, pick your name (Personal Team).
-   - If Xcode says the bundle identifier isn't available, change `com.rai.igsaver` to something unique, for example `com.rai.igsaver.mine`.
-4. **Connect your iPhone** with a cable and tap **Trust** on the phone.
-5. **Turn on Developer Mode** on the iPhone. Go to Settings › Privacy & Security › Developer Mode, switch it on and restart. The option only appears after the phone has been connected to Xcode once.
-6. **Run the app.** At the top of the Xcode window, choose your iPhone as the run destination, then press **▶** (or ⌘R).
-7. **Trust the app the first time.** If the iPhone says "Untrusted Developer", go to Settings › General › VPN & Device Management, tap your Apple ID, then tap **Trust**.
+Every push to `main` builds an unsigned IPA on GitHub's Mac runners (`.github/workflows/build-ipa.yml`) and publishes it to the `builds` branch:
 
-**How long the install lasts:** with a free Apple ID, the app stops opening after 7 days. Plug the phone in and press ▶ again to renew it. A paid Apple Developer account ($99/yr) makes it last a year.
+- `IGSaver.ipa`
+- `build.log`
+- `status.txt`
 
-## Using it
+Always check `build.log` for `** BUILD SUCCEEDED **`. `status.txt` can say `success` even when the build failed.
 
-1. In Instagram, tap the **Share** (paper-plane) icon, then **Copy link**.
-2. Open IGSaver and tap **Paste**. The app fetches the media right away.
-3. Tap **Save all** to save everything, or tap one tile to preview it and save just that one.
+The build ad-hoc signs the app and share extension with their entitlements (`Config/sign-adhoc.sh`) so SideStore can set up the shared app group. SideStore then re-signs everything with your Apple ID.
 
-**For stories and highlights:**
-- Tap the person icon (top right) once and log in on Instagram's own login page. The app keeps the login.
-- Your password goes only to Instagram. The app stores the session cookie, the same way Safari does.
-- Consider using a spare Instagram account. Instagram sometimes flags accounts that download a lot.
+**Running from Xcode instead:**
+1. In each target's build settings, set `CODE_SIGNING_ALLOWED` to `YES`.
+2. Pick your team.
+3. Build to your phone.
 
-## When something goes wrong
+## Project layout
 
-- **"Instagram wants you to be logged in"**: Instagram often blocks logged-out fetches, even for public posts. Log in and try again.
-- **"Instagram wants to confirm it's you"**: open the login screen from the person icon and complete Instagram's check there.
-- **"limiting requests"**: you've fetched a lot in a short time. Wait a few minutes.
-- **Something that used to work stops working**: Instagram changes its internal web API every few months.
-  - All the Instagram-specific code is in `IGSaver/InstagramClient.swift`.
-  - Ask Claude Code to "update InstagramClient.swift for Instagram's current web API".
-  - The logged-out post fetch depends on `postQueryDocID`, which is the value that changes most often.
+- `App/`: the app's screens, Live Activity control, Instagram login and assets.
+- `ShareExtension/`: the share-sheet card.
+- `Widgets/`: the Dynamic Island / Lock Screen Live Activity.
+- `Engine/`: link parsing, the Instagram/Threads/Facebook extractors, DASH quality selection, downloading, merging, saving to Photos and history. Used by both the app and the share extension.
+- `Common/`: brand colours, the mark, and Live Activity data (all targets).
+- `Config/`: Info.plists, entitlements and the signing script.
 
-## Files
+**When a platform changes its site:**
 
-- `IGSaver/InstagramLink.swift`: recognises and parses links.
-- `IGSaver/InstagramClient.swift`: fetches post, reel, story and highlight media.
-- `IGSaver/PhotoSaver.swift`: downloads files and adds them to Photos.
-- `IGSaver/LoginView.swift`: Instagram login in a web view, plus log out.
-- `IGSaver/ContentView.swift` and `IGSaver/DownloaderModel.swift`: the screens.
-- `project.yml`: a spare project definition, only needed if the `.xcodeproj` ever gets corrupted.
-  - To regenerate the project: `brew install xcodegen`, then run `xcodegen` in this folder.
+| Platform | File | Notes |
+|---|---|---|
+| Instagram | `Engine/InstagramExtractor.swift` | `postQueryDocID` rotates the most |
+| Threads | `Engine/ThreadsExtractor.swift` | Media sits under `data.media` in the page's JSON |
+| Facebook | `Engine/FacebookExtractor.swift` | Looks for `browser_native_hd_url` and `representations` |
 
-This app is for personal use only. Only save content you have the right to keep, and don't repost other people's work without permission.
+## Personal use
+
+Only save what you have the right to keep, and ask before reposting other people's work.
