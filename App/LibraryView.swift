@@ -326,50 +326,71 @@ struct LibraryView: View {
 
     // MARK: - Filters
 
-    /// Filter chips that fit the width: names when there's room, otherwise the selected
-    /// filter keeps its name and the others show just their icon.
+    /// A platform menu and a Favourites toggle: two fixed-size buttons that always fit.
     private var filterBar: some View {
-        ViewThatFits(in: .horizontal) {
-            filterRow(compact: false)
-            filterRow(compact: true)
+        HStack(spacing: 8) {
+            Menu {
+                Button {
+                    withAnimation(.snappy) { filter = nil }
+                } label: {
+                    if filter == nil {
+                        Label("All Platforms", systemImage: "checkmark")
+                    } else {
+                        Label("All Platforms", systemImage: "square.grid.2x2")
+                    }
+                }
+                Divider()
+                ForEach(Platform.allCases) { platform in
+                    Button {
+                        withAnimation(.snappy) { filter = platform }
+                    } label: {
+                        if filter == platform {
+                            Label(platform.name, systemImage: "checkmark")
+                        } else {
+                            Label(platform.name, systemImage: platform.symbol)
+                        }
+                    }
+                }
+            } label: {
+                filterCapsule(title: filter?.name ?? "All Platforms", symbol: filter?.symbol ?? "square.grid.2x2",
+                              isOn: filter != nil, menu: true)
+            }
+
+            Button {
+                withAnimation(.snappy) { favoritesOnly.toggle() }
+            } label: {
+                filterCapsule(title: "Favourites", symbol: favoritesOnly ? "heart.fill" : "heart", isOn: favoritesOnly, menu: false)
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+
+            Text("\(filtered.count)")
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText())
+                .animation(.snappy, value: filtered.count)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
     }
 
-    private func filterRow(compact: Bool) -> some View {
-        HStack(spacing: 8) {
-            chip(title: "All", symbol: "square.grid.2x2", isOn: filter == nil && !favoritesOnly, iconOnly: false) {
-                filter = nil
-                favoritesOnly = false
+    private func filterCapsule(title: String, symbol: String, isOn: Bool, menu: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol)
+            Text(title).lineLimit(1)
+            if menu {
+                Image(systemName: "chevron.down").font(.caption2.weight(.bold))
             }
-            chip(title: "Favourites", symbol: "heart.fill", isOn: favoritesOnly, iconOnly: compact && !favoritesOnly) {
-                favoritesOnly.toggle()
-            }
-            ForEach(Platform.allCases) { platform in
-                chip(title: platform.name, symbol: platform.symbol, isOn: filter == platform,
-                     iconOnly: compact && filter != platform) {
-                    filter = filter == platform ? nil : platform
-                }
-            }
-            Spacer(minLength: 0)
         }
-    }
-
-    private func chip(title: String, symbol: String, isOn: Bool, iconOnly: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            withAnimation(.snappy) { action() }
-        } label: {
-            Label(title, systemImage: symbol)
-                .labelStyle(iconOnly ? AnyLabelStyle(.iconOnly) : AnyLabelStyle(.titleAndIcon))
-                .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .foregroundStyle(isOn ? .white : .primary)
-                .background(isOn ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
-                            in: Capsule())
-        }
-        .buttonStyle(.plain)
+        .font(.subheadline.weight(.medium))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .foregroundStyle(isOn ? .white : .primary)
+        .background(isOn ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                    in: Capsule())
+        .fixedSize()
+        .contentShape(Capsule())
     }
 }
 

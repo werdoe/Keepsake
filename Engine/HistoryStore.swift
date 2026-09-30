@@ -51,7 +51,58 @@ final class HistoryStore: ObservableObject {
         return dir
     }
 
-    private init() { reload() }
+    private init() {
+        Self.migrateStrandedData()
+        reload()
+    }
+
+    /// Before the app-group fix, the share sheet could end up writing to its own private folder
+    /// (SideStore renamed the group). Once the shared group works, move that data into it.
+    static func migrateStrandedData() {
+        guard AppGroup.isAvailable else { return }
+        let fm = FileManager.default
+        let privateDir = AppGroup.privateDirectory
+        let shared = AppGroup.dataDirectory
+        guard privateDir.standardizedFileURL != shared.standardizedFileURL else { return }
+
+        // Library entries and their thumbnails.
+        let strandedHistory = privateDir.appendingPathComponent("history.json")
+        if let data = try? Data(contentsOf: strandedHistory),
+           let stranded = try? JSONDecoder().decode([HistoryEntry].self, from: data), !stranded.isEmpty {
+            let privateThumbs = privateDir.appendingPathComponent("Thumbnails", isDirectory: true)
+            for name in stranded.compactMap(\.thumbnailFile) {
+                let target = thumbnailsDirectory.appendingPathComponent(name)
+                if !fm.fileExists(atPath: target.path) {
+                    try? fm.moveItem(at: privateThumbs.appendingPathComponent(name), to: target)
+                }
+            }
+            var all = readEntries()
+            let existing = Set(all.map(\.id))
+            all += stranded.filter { !existing.contains($0.id) }
+            if let merged = try? JSONEncoder().encode(all.sorted { $0.date > $1.date }) {
+                try? merged.write(to: fileURL, options: .atomic)
+            }
+            try? fm.removeItem(at: strandedHistory)
+        }
+
+        // Queued links.
+        let strandedQueue = privateDir.appendingPathComponent("queue.json")
+        if let data = try? Data(contentsOf: strandedQueue),
+           let items = try? JSONDecoder().decode([QueuedLink].self, from: data) {
+            for item in items { OfflineQueue.shared.add(item.link) }
+            try? fm.removeItem(at: strandedQueue)
+        }
+
+        // Files the share sheet saved for the Files app.
+        let strandedInbox = privateDir.appendingPathComponent("FilesInbox", isDirectory: true)
+        if fm.fileExists(atPath: strandedInbox.path) {
+            let sharedInbox = shared.appendingPathComponent("FilesInbox", isDirectory: true)
+            try? fm.createDirectory(at: sharedInbox, withIntermediateDirectories: true)
+            for item in (try? fm.contentsOfDirectory(at: strandedInbox, includingPropertiesForKeys: nil)) ?? [] {
+                try? fm.moveItem(at: item, to: sharedInbox.appendingPathComponent(item.lastPathComponent))
+            }
+        }
+    }
 
     /// Reads entries straight from disk (used by widgets, which don't keep a store around).
     static func readEntries() -> [HistoryEntry] {

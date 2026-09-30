@@ -500,6 +500,30 @@ struct StorageView: View {
             }
 
             Section {
+                HStack {
+                    Text("Share sheet link")
+                    Spacer()
+                    Label(AppGroup.isAvailable ? "Connected" : "Not connected",
+                          systemImage: AppGroup.isAvailable ? "checkmark.circle.fill" : "xmark.octagon.fill")
+                        .foregroundStyle(AppGroup.isAvailable ? .green : .red)
+                }
+                if let last = AppGroup.defaults.object(forKey: "shareExtensionLastRun") as? Date {
+                    row("Share sheet last used", last.formatted(.relative(presentation: .named)))
+                }
+                if let shareGroup = AppGroup.defaults.string(forKey: "shareExtensionGroup"), shareGroup != AppGroup.identifier {
+                    Text("The share sheet is using a different storage area (\(shareGroup)). Reinstall Keepsake with SideStore.")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Share Sheet")
+            } footer: {
+                Text(AppGroup.isAvailable
+                     ? "Saves from the share sheet appear in the Library. Connected to \(AppGroup.identifier)."
+                     : "Keepsake can't open its shared storage, so share-sheet saves can't reach the Library. Reinstall Keepsake with SideStore to fix this.")
+            }
+
+            Section {
                 row("Files app copies", ByteCountFormatter.string(fromByteCount: filesSize, countStyle: .file))
                 row("Library previews", ByteCountFormatter.string(fromByteCount: thumbnailsSize, countStyle: .file))
                 row("Temporary downloads", ByteCountFormatter.string(fromByteCount: tempSize, countStyle: .file))

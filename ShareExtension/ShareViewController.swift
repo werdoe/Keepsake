@@ -11,6 +11,9 @@ final class ShareViewController: UIViewController {
         view.backgroundColor = .clear
         // The hidden browser used for TikTok and logged-in pages needs a view to live in.
         WebCapture.hostView = view
+        // Let the app see which shared container the share sheet is using.
+        AppGroup.recordShareExtensionRun()
+        HistoryStore.migrateStrandedData()
 
         model.close = { [weak self] in
             self?.extensionContext?.completeRequest(returningItems: nil)
