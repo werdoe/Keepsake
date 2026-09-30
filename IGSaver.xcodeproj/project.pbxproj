@@ -6,20 +6,93 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B1C2D3E4F5A6000000000026 /* KeepsakeShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5A600000000000D /* KeepsakeShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B1C2D3E4F5A6000000000027 /* KeepsakeWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5A600000000000E /* KeepsakeWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B1C2D3E4F5A600000000002A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B1C2D3E4F5A6000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B1C2D3E4F5A6000000000018;
+			remoteInfo = KeepsakeShare;
+		};
+		B1C2D3E4F5A600000000002B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B1C2D3E4F5A6000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B1C2D3E4F5A600000000001F;
+			remoteInfo = KeepsakeWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B1C2D3E4F5A6000000000016 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B1C2D3E4F5A6000000000026 /* KeepsakeShare.appex in Embed Foundation Extensions */,
+				B1C2D3E4F5A6000000000027 /* KeepsakeWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		A1B2C3D4E5F6000000000001 /* IGSaver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IGSaver.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1C2D3E4F5A600000000000C /* IGSaver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IGSaver.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1C2D3E4F5A600000000000D /* KeepsakeShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KeepsakeShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1C2D3E4F5A600000000000E /* KeepsakeWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KeepsakeWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A1B2C3D4E5F6000000000002 /* IGSaver */ = {
+		B1C2D3E4F5A6000000000007 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = IGSaver;
+			path = App;
+			sourceTree = "<group>";
+		};
+		B1C2D3E4F5A6000000000008 /* Common */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Common;
+			sourceTree = "<group>";
+		};
+		B1C2D3E4F5A6000000000009 /* Engine */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		B1C2D3E4F5A600000000000A /* ShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
+		B1C2D3E4F5A600000000000B /* Widgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Widgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A1B2C3D4E5F6000000000003 /* Frameworks */ = {
+		B1C2D3E4F5A6000000000014 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1C2D3E4F5A600000000001D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1C2D3E4F5A6000000000024 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -29,18 +102,24 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A1B2C3D4E5F6000000000004 = {
+		B1C2D3E4F5A6000000000005 = {
 			isa = PBXGroup;
 			children = (
-				A1B2C3D4E5F6000000000002 /* IGSaver */,
-				A1B2C3D4E5F6000000000005 /* Products */,
+				B1C2D3E4F5A6000000000007 /* App */,
+				B1C2D3E4F5A6000000000008 /* Common */,
+				B1C2D3E4F5A6000000000009 /* Engine */,
+				B1C2D3E4F5A600000000000A /* ShareExtension */,
+				B1C2D3E4F5A600000000000B /* Widgets */,
+				B1C2D3E4F5A6000000000006 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		A1B2C3D4E5F6000000000005 /* Products */ = {
+		B1C2D3E4F5A6000000000006 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A1B2C3D4E5F6000000000001 /* IGSaver.app */,
+				B1C2D3E4F5A600000000000C /* IGSaver.app */,
+				B1C2D3E4F5A600000000000D /* KeepsakeShare.appex */,
+				B1C2D3E4F5A600000000000E /* KeepsakeWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,64 +127,141 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A1B2C3D4E5F6000000000006 /* IGSaver */ = {
+		B1C2D3E4F5A600000000000F /* IGSaver */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A1B2C3D4E5F6000000000007 /* Build configuration list for PBXNativeTarget "IGSaver" */;
+			buildConfigurationList = B1C2D3E4F5A6000000000010 /* Build configuration list for PBXNativeTarget "IGSaver" */;
 			buildPhases = (
-				A1B2C3D4E5F6000000000008 /* Sources */,
-				A1B2C3D4E5F6000000000003 /* Frameworks */,
-				A1B2C3D4E5F6000000000009 /* Resources */,
+				B1C2D3E4F5A6000000000013 /* Sources */,
+				B1C2D3E4F5A6000000000014 /* Frameworks */,
+				B1C2D3E4F5A6000000000015 /* Resources */,
+				B1C2D3E4F5A6000000000016 /* Embed Foundation Extensions */,
+				B1C2D3E4F5A6000000000017 /* Ad-hoc sign for SideStore */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B1C2D3E4F5A6000000000028 /* PBXTargetDependency */,
+				B1C2D3E4F5A6000000000029 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				A1B2C3D4E5F6000000000002 /* IGSaver */,
+				B1C2D3E4F5A6000000000007 /* App */,
+				B1C2D3E4F5A6000000000008 /* Common */,
+				B1C2D3E4F5A6000000000009 /* Engine */,
 			);
 			name = IGSaver;
 			packageProductDependencies = (
 			);
 			productName = IGSaver;
-			productReference = A1B2C3D4E5F6000000000001 /* IGSaver.app */;
+			productReference = B1C2D3E4F5A600000000000C /* IGSaver.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B1C2D3E4F5A6000000000018 /* KeepsakeShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1C2D3E4F5A6000000000019 /* Build configuration list for PBXNativeTarget "KeepsakeShare" */;
+			buildPhases = (
+				B1C2D3E4F5A600000000001C /* Sources */,
+				B1C2D3E4F5A600000000001D /* Frameworks */,
+				B1C2D3E4F5A600000000001E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+
+			);
+			fileSystemSynchronizedGroups = (
+				B1C2D3E4F5A600000000000A /* ShareExtension */,
+				B1C2D3E4F5A6000000000008 /* Common */,
+				B1C2D3E4F5A6000000000009 /* Engine */,
+			);
+			name = KeepsakeShare;
+			packageProductDependencies = (
+			);
+			productName = KeepsakeShare;
+			productReference = B1C2D3E4F5A600000000000D /* KeepsakeShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		B1C2D3E4F5A600000000001F /* KeepsakeWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1C2D3E4F5A6000000000020 /* Build configuration list for PBXNativeTarget "KeepsakeWidgets" */;
+			buildPhases = (
+				B1C2D3E4F5A6000000000023 /* Sources */,
+				B1C2D3E4F5A6000000000024 /* Frameworks */,
+				B1C2D3E4F5A6000000000025 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+
+			);
+			fileSystemSynchronizedGroups = (
+				B1C2D3E4F5A600000000000B /* Widgets */,
+				B1C2D3E4F5A6000000000008 /* Common */,
+			);
+			name = KeepsakeWidgets;
+			packageProductDependencies = (
+			);
+			productName = KeepsakeWidgets;
+			productReference = B1C2D3E4F5A600000000000E /* KeepsakeWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		A1B2C3D4E5F600000000000A /* Project object */ = {
+		B1C2D3E4F5A6000000000001 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
-					A1B2C3D4E5F6000000000006 = {
+					B1C2D3E4F5A600000000000F = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					B1C2D3E4F5A6000000000018 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					B1C2D3E4F5A600000000001F = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
 			};
-			buildConfigurationList = A1B2C3D4E5F600000000000B /* Build configuration list for PBXProject "IGSaver" */;
+			buildConfigurationList = B1C2D3E4F5A6000000000002 /* Build configuration list for PBXProject "IGSaver" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = A1B2C3D4E5F6000000000004;
+			mainGroup = B1C2D3E4F5A6000000000005;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = A1B2C3D4E5F6000000000005 /* Products */;
+			productRefGroup = B1C2D3E4F5A6000000000006 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A1B2C3D4E5F6000000000006 /* IGSaver */,
+				B1C2D3E4F5A600000000000F /* IGSaver */,
+				B1C2D3E4F5A6000000000018 /* KeepsakeShare */,
+				B1C2D3E4F5A600000000001F /* KeepsakeWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A1B2C3D4E5F6000000000009 /* Resources */ = {
+		B1C2D3E4F5A6000000000015 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1C2D3E4F5A600000000001E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1C2D3E4F5A6000000000025 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -114,8 +270,44 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		B1C2D3E4F5A6000000000017 /* Ad-hoc sign for SideStore */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Ad-hoc sign for SideStore";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/bash \"${PROJECT_DIR}/Config/sign-adhoc.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
-		A1B2C3D4E5F6000000000008 /* Sources */ = {
+		B1C2D3E4F5A6000000000013 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1C2D3E4F5A600000000001C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1C2D3E4F5A6000000000023 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -124,8 +316,21 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		B1C2D3E4F5A6000000000028 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B1C2D3E4F5A6000000000018 /* KeepsakeShare */;
+			targetProxy = B1C2D3E4F5A600000000002A /* PBXContainerItemProxy */;
+		};
+		B1C2D3E4F5A6000000000029 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B1C2D3E4F5A600000000001F /* KeepsakeWidgets */;
+			targetProxy = B1C2D3E4F5A600000000002B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		A1B2C3D4E5F600000000000C /* Debug */ = {
+		B1C2D3E4F5A6000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -135,12 +340,13 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
+				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -159,7 +365,7 @@
 			};
 			name = Debug;
 		};
-		A1B2C3D4E5F600000000000D /* Release */ = {
+		B1C2D3E4F5A6000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -169,12 +375,13 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
+				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -186,94 +393,240 @@
 			};
 			name = Release;
 		};
-		A1B2C3D4E5F600000000000E /* Debug */ = {
+		B1C2D3E4F5A6000000000011 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
-				ENABLE_PREVIEWS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = IGSaver;
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "IGSaver saves the photos and videos you download to your library.";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 2.0;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/IGSaver.entitlements;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				INFOPLIST_FILE = Config/IGSaver-Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Keepsake saves the photos and videos you download to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		A1B2C3D4E5F600000000000F /* Release */ = {
+		B1C2D3E4F5A6000000000012 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CONFIGURATION_BUILD_DIR = "$(PROJECT_DIR)/build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
-				ENABLE_PREVIEWS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = IGSaver;
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "IGSaver saves the photos and videos you download to your library.";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 2.0;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/IGSaver.entitlements;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				INFOPLIST_FILE = Config/IGSaver-Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Keepsake saves the photos and videos you download to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		B1C2D3E4F5A600000000001A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 2.0;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Keepsake saves the photos and videos you download to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
+				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeShare.entitlements;
+				INFOPLIST_FILE = Config/KeepsakeShare-Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.share;
+			};
+			name = Debug;
+		};
+		B1C2D3E4F5A600000000001B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 2.0;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Keepsake saves the photos and videos you download to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
+				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeShare.entitlements;
+				INFOPLIST_FILE = Config/KeepsakeShare-Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.share;
+			};
+			name = Release;
+		};
+		B1C2D3E4F5A6000000000021 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 2.0;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_FILE = Config/KeepsakeWidgets-Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.widgets;
+			};
+			name = Debug;
+		};
+		B1C2D3E4F5A6000000000022 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 2.0;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				SKIP_INSTALL = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_FILE = Config/KeepsakeWidgets-Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.widgets;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A1B2C3D4E5F600000000000B /* Build configuration list for PBXProject "IGSaver" */ = {
+		B1C2D3E4F5A6000000000002 /* Build configuration list for PBXProject "IGSaver" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A1B2C3D4E5F600000000000C /* Debug */,
-				A1B2C3D4E5F600000000000D /* Release */,
+				B1C2D3E4F5A6000000000003 /* Debug */,
+				B1C2D3E4F5A6000000000004 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A1B2C3D4E5F6000000000007 /* Build configuration list for PBXNativeTarget "IGSaver" */ = {
+		B1C2D3E4F5A6000000000010 /* Build configuration list for PBXNativeTarget "IGSaver" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A1B2C3D4E5F600000000000E /* Debug */,
-				A1B2C3D4E5F600000000000F /* Release */,
+				B1C2D3E4F5A6000000000011 /* Debug */,
+				B1C2D3E4F5A6000000000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B1C2D3E4F5A6000000000019 /* Build configuration list for PBXNativeTarget "KeepsakeShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1C2D3E4F5A600000000001A /* Debug */,
+				B1C2D3E4F5A600000000001B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B1C2D3E4F5A6000000000020 /* Build configuration list for PBXNativeTarget "KeepsakeWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1C2D3E4F5A6000000000021 /* Debug */,
+				B1C2D3E4F5A6000000000022 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = A1B2C3D4E5F600000000000A /* Project object */;
+	rootObject = B1C2D3E4F5A6000000000001 /* Project object */;
 }
