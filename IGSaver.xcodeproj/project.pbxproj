@@ -75,6 +75,11 @@
 			path = Widgets;
 			sourceTree = "<group>";
 		};
+		B1C2D3E4F5A6000000000FFF /* Intents */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Intents;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +113,7 @@
 				B1C2D3E4F5A6000000000007 /* App */,
 				B1C2D3E4F5A6000000000008 /* Common */,
 				B1C2D3E4F5A6000000000009 /* Engine */,
+				B1C2D3E4F5A6000000000FFF /* Intents */,
 				B1C2D3E4F5A600000000000A /* ShareExtension */,
 				B1C2D3E4F5A600000000000B /* Widgets */,
 				B1C2D3E4F5A6000000000006 /* Products */,
@@ -147,6 +153,7 @@
 				B1C2D3E4F5A6000000000007 /* App */,
 				B1C2D3E4F5A6000000000008 /* Common */,
 				B1C2D3E4F5A6000000000009 /* Engine */,
+				B1C2D3E4F5A6000000000FFF /* Intents */,
 			);
 			name = IGSaver;
 			packageProductDependencies = (
@@ -196,6 +203,8 @@
 			fileSystemSynchronizedGroups = (
 				B1C2D3E4F5A600000000000B /* Widgets */,
 				B1C2D3E4F5A6000000000008 /* Common */,
+				B1C2D3E4F5A6000000000009 /* Engine */,
+				B1C2D3E4F5A6000000000FFF /* Intents */,
 			);
 			name = KeepsakeWidgets;
 			packageProductDependencies = (
@@ -405,8 +414,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				CURRENT_PROJECT_VERSION = 3;
-				MARKETING_VERSION = 2.0.1;
+				CURRENT_PROJECT_VERSION = 4;
+				MARKETING_VERSION = 2.1;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Config/IGSaver.entitlements;
@@ -417,6 +426,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Keepsake saves the photos and videos you download to your library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Keepsake uses Face ID to lock your Library.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -443,8 +453,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				CURRENT_PROJECT_VERSION = 3;
-				MARKETING_VERSION = 2.0.1;
+				CURRENT_PROJECT_VERSION = 4;
+				MARKETING_VERSION = 2.1;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Config/IGSaver.entitlements;
@@ -455,6 +465,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Keepsake saves the photos and videos you download to your library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Keepsake uses Face ID to lock your Library.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -481,8 +492,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				CURRENT_PROJECT_VERSION = 3;
-				MARKETING_VERSION = 2.0.1;
+				CURRENT_PROJECT_VERSION = 4;
+				MARKETING_VERSION = 2.1;
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				SKIP_INSTALL = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
@@ -512,8 +523,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				CURRENT_PROJECT_VERSION = 3;
-				MARKETING_VERSION = 2.0.1;
+				CURRENT_PROJECT_VERSION = 4;
+				MARKETING_VERSION = 2.1;
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				SKIP_INSTALL = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
@@ -543,8 +554,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				CURRENT_PROJECT_VERSION = 3;
-				MARKETING_VERSION = 2.0.1;
+				CURRENT_PROJECT_VERSION = 4;
+				MARKETING_VERSION = 2.1;
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				SKIP_INSTALL = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
@@ -554,6 +565,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeWidgets.entitlements;
 				INFOPLIST_FILE = Config/KeepsakeWidgets-Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.widgets;
 			};
@@ -571,8 +583,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				CURRENT_PROJECT_VERSION = 3;
-				MARKETING_VERSION = 2.0.1;
+				CURRENT_PROJECT_VERSION = 4;
+				MARKETING_VERSION = 2.1;
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				SKIP_INSTALL = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Keepsake;
@@ -582,6 +594,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeWidgets.entitlements;
 				INFOPLIST_FILE = Config/KeepsakeWidgets-Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.widgets;
 			};

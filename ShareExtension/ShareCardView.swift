@@ -10,9 +10,11 @@ final class ShareModel: ObservableObject {
     @Published var savedIDs: Set<UUID> = []
     @Published var message = ""
     @Published var successTick = 0
+    @Published var previousSave: HistoryEntry?
 
     var close: () -> Void = {}
     let settings = AppSettings.shared
+    private let downloader = Downloader()
     private var task: Task<Void, Never>?
 
     func start(with text: String?) {
@@ -23,11 +25,14 @@ final class ShareModel: ObservableObject {
         task = Task {
             do {
                 let result = try await MediaFetcher.fetch(text)
+                let earlier = HistoryStore.shared.previousSave(of: result.key)
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                     bundle = result
+                    previousSave = earlier
                     phase = .ready
                 }
-                if settings.shareAutoSave { save() }
+                // Ask before saving something you already have.
+                if settings.shareAutoSave && earlier == nil { save() }
             } catch {
                 fail(error)
             }
@@ -40,15 +45,16 @@ final class ShareModel: ObservableObject {
         task = Task {
             do {
                 let result = try await SavePipeline.save(
-                    bundle.items, from: bundle,
+                    bundle.items, from: bundle, downloader: downloader,
                     onItemSaved: { [weak self] id in
                         Task { @MainActor in withAnimation(.spring) { _ = self?.savedIDs.insert(id) } }
                     },
                     progress: { [weak self] p in
                         Task { @MainActor in self?.progress = p }
                     })
+                let place = settings.destination == .files ? "Files" : "Photos"
                 message = result.failures.isEmpty
-                    ? (result.savedItemIDs.count == 1 ? "Saved to Photos" : "Saved \(result.savedItemIDs.count) items to Photos")
+                    ? (result.savedItemIDs.count == 1 ? "Saved to \(place)" : "Saved \(result.savedItemIDs.count) items to \(place)")
                     : "Saved \(result.savedItemIDs.count) of \(bundle.items.count)"
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.6)) { phase = .done }
                 successTick += 1
@@ -104,7 +110,7 @@ struct ShareCardView: View {
                 .animation(.spring(response: 0.5, dampingFraction: 0.6), value: model.phase)
             VStack(alignment: .leading, spacing: 1) {
                 Text(Brand.name).font(.headline)
-                Text(model.bundle.map { "\($0.platform.name) · \($0.title)" } ?? "Save to Photos")
+                Text(model.bundle.map { "\($0.platform.name) · \($0.title)" } ?? "Save to \(model.settings.destination == .files ? "Files" : "Photos")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -137,10 +143,27 @@ struct ShareCardView: View {
         case .ready:
             VStack(spacing: 14) {
                 thumbnailStrip(placeholder: false)
+                if let earlier = model.previousSave {
+                    Label("You saved this \(earlier.date.formatted(.relative(presentation: .named)))", systemImage: "clock.arrow.circlepath")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
+                if let caption = model.bundle?.caption {
+                    Text(caption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onLongPressGesture {
+                            UIPasteboard.general.string = caption
+                            model.successTick += 1
+                        }
+                }
                 Button {
                     model.save()
                 } label: {
-                    Label(model.bundle?.items.count == 1 ? "Save to Photos" : "Save All \(model.bundle?.items.count ?? 0)",
+                    Label(model.previousSave != nil ? "Save Again"
+                          : (model.bundle?.items.count == 1 ? "Save" : "Save All \(model.bundle?.items.count ?? 0)"),
                           systemImage: "arrow.down.circle.fill")
                         .font(.headline)
                         .foregroundStyle(.white)

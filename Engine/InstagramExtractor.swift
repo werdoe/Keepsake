@@ -20,18 +20,20 @@ enum InstagramExtractor {
         if isLoggedIn, let mediaID = MediaLink.mediaID(fromShortcode: shortcode) {
             let json = try await api("media/\(mediaID)/info/")
             guard let media = (json["items"] as? [[String: Any]])?.first else { throw KeepsakeError.notFound }
-            return try bundle(from: media, fallbackTitle: "Post", source: source)
+            return try bundle(from: media, fallbackTitle: "Post", source: source, key: "instagram:\(shortcode)")
         }
         // Logged out: try the page's embedded data first, then the web app's post query.
         if let media = try? await mediaFromPage(shortcode: shortcode) {
-            return try bundle(from: media, fallbackTitle: "Post", source: source)
+            return try bundle(from: media, fallbackTitle: "Post", source: source, key: "instagram:\(shortcode)")
         }
         if let media = try? await mediaFromQuery(shortcode: shortcode) {
             let items = graphQLItems(media)
             if !items.isEmpty {
                 let owner = (media["owner"] as? [String: Any])?["username"] as? String
+                let seconds = HTTP.int(media["taken_at_timestamp"])
                 return MediaBundle(platform: .instagram, title: owner.map { "@\($0)" } ?? "Post",
-                                   caption: nil, sourceURL: source, items: items)
+                                   caption: nil, sourceURL: source, items: items, key: "instagram:\(shortcode)",
+                                   date: seconds > 0 ? Date(timeIntervalSince1970: TimeInterval(seconds)) : nil)
             }
         }
         throw KeepsakeError.loginRequired
@@ -77,6 +79,37 @@ enum InstagramExtractor {
                           standard: MediaSource(url: display, width: w, height: h), best: nil)]
     }
 
+    // MARK: - Profiles
+
+    /// A profile's latest posts (up to 12). Logged in, uses the full feed; logged out, the public profile.
+    static func latestPosts(username: String) async throws -> MediaBundle {
+        let profile = try await api("users/web_profile_info/", query: [URLQueryItem(name: "username", value: username)])
+        guard let user = (profile["data"] as? [String: Any])?["user"] as? [String: Any] else { throw KeepsakeError.notFound }
+        let source = URL(string: "https://www.instagram.com/\(username)/")!
+        var items: [MediaItem] = []
+
+        if isLoggedIn, let userID = HTTP.string(user["id"]) {
+            let feed = try await api("feed/user/\(userID)/", query: [URLQueryItem(name: "count", value: "12")])
+            items = (feed["items"] as? [[String: Any]] ?? []).prefix(12).flatMap { MetaMediaParser.items(from: $0) }
+        } else {
+            let edges = ((user["edge_owner_to_timeline_media"] as? [String: Any])?["edges"] as? [[String: Any]]) ?? []
+            for node in edges.prefix(12).compactMap({ $0["node"] as? [String: Any] }) {
+                let isVideo = (node["is_video"] as? Bool) == true
+                if isVideo && node["video_url"] == nil, let code = node["shortcode"] as? String,
+                   let post = try? await post(shortcode: code, url: source) {
+                    items += post.items
+                } else {
+                    items += graphQLItems(node)
+                }
+            }
+        }
+        if items.isEmpty {
+            throw (user["is_private"] as? Bool) == true ? KeepsakeError.loginRequired : KeepsakeError.noMedia
+        }
+        return MediaBundle(platform: .instagram, title: "@\(username)", caption: "Latest posts",
+                           sourceURL: source, items: items, key: nil)
+    }
+
     // MARK: - Stories & highlights
 
     static func stories(username: String, storyID: String?) async throws -> MediaBundle {
@@ -87,7 +120,8 @@ enum InstagramExtractor {
         let items = try await reelItems(reelID: userID, onlyItem: storyID)
         return MediaBundle(platform: .instagram, title: "@\(username)",
                            caption: storyID == nil ? "Stories" : "Story",
-                           sourceURL: URL(string: "https://www.instagram.com/stories/\(username)/")!, items: items)
+                           sourceURL: URL(string: "https://www.instagram.com/stories/\(username)/")!, items: items,
+                           key: storyID.map { "instagram:story:\($0)" })
     }
 
     static func highlight(id: String, itemID: String?) async throws -> MediaBundle {
@@ -133,12 +167,13 @@ enum InstagramExtractor {
 
     // MARK: - Networking
 
-    private static func bundle(from media: [String: Any], fallbackTitle: String, source: URL) throws -> MediaBundle {
+    private static func bundle(from media: [String: Any], fallbackTitle: String, source: URL, key: String?) throws -> MediaBundle {
         let items = MetaMediaParser.items(from: media)
         if items.isEmpty { throw KeepsakeError.noMedia }
         return MediaBundle(platform: .instagram,
                            title: MetaMediaParser.username(of: media).map { "@\($0)" } ?? fallbackTitle,
-                           caption: MetaMediaParser.caption(of: media), sourceURL: source, items: items)
+                           caption: MetaMediaParser.caption(of: media), sourceURL: source, items: items,
+                           key: key, date: MetaMediaParser.date(of: media))
     }
 
     private static func apiRequest(_ url: URL) -> URLRequest {

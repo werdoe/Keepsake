@@ -9,6 +9,8 @@ final class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
+        // The hidden browser used for TikTok and logged-in pages needs a view to live in.
+        WebCapture.hostView = view
 
         model.close = { [weak self] in
             self?.extensionContext?.completeRequest(returningItems: nil)

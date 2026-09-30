@@ -5,6 +5,7 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
     case instagram
     case threads
     case facebook
+    case tiktok
 
     var id: String { rawValue }
 
@@ -13,6 +14,7 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .instagram: return "Instagram"
         case .threads: return "Threads"
         case .facebook: return "Facebook"
+        case .tiktok: return "TikTok"
         }
     }
 
@@ -22,6 +24,7 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .instagram: return "camera"
         case .threads: return "at"
         case .facebook: return "person.2"
+        case .tiktok: return "music.note"
         }
     }
 
@@ -30,14 +33,51 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .instagram: return Color(red: 0.86, green: 0.25, blue: 0.47)
         case .threads: return Color.primary
         case .facebook: return Color(red: 0.10, green: 0.47, blue: 0.95)
+        case .tiktok: return Color(red: 0.93, green: 0.18, blue: 0.36)
         }
     }
 
     var supportedKinds: String {
         switch self {
-        case .instagram: return "Posts, reels, stories, highlights"
-        case .threads: return "Public posts: photos and videos"
-        case .facebook: return "Public reels, videos and photos"
+        case .instagram: return "Posts, reels, stories, highlights, profiles"
+        case .threads: return "Posts and profiles (private ones after logging in)"
+        case .facebook: return "Reels, videos and photos (private and friends-only after logging in)"
+        case .tiktok: return "Videos without watermark, photo slideshows, sounds"
+        }
+    }
+
+    /// Where to log in, and which cookie proves you're logged in.
+    var loginURL: URL? {
+        switch self {
+        case .instagram: return URL(string: "https://www.instagram.com/accounts/login/")
+        case .threads: return URL(string: "https://www.threads.com/login")
+        case .facebook: return URL(string: "https://www.facebook.com/login")
+        case .tiktok: return nil
+        }
+    }
+
+    var cookieDomains: [String] {
+        switch self {
+        case .instagram: return ["instagram.com"]
+        case .threads: return ["threads.com", "threads.net"]
+        case .facebook: return ["facebook.com"]
+        case .tiktok: return ["tiktok.com"]
+        }
+    }
+
+    var sessionCookieName: String {
+        switch self {
+        case .facebook: return "c_user"
+        default: return "sessionid"
+        }
+    }
+
+    var loginHelp: String {
+        switch self {
+        case .instagram: return "Stories, highlights and private accounts you follow"
+        case .threads: return "Private accounts you follow"
+        case .facebook: return "Friends-only and private posts, and stories"
+        case .tiktok: return ""
         }
     }
 }
@@ -50,6 +90,8 @@ struct MediaSource: Hashable, Codable {
     var width: Int
     var height: Int
     var codec: String?
+    /// Extra request headers some CDNs require (TikTok needs its cookies and a Referer).
+    var headers: [String: String]?
 
     var pixelCount: Int { width * height }
 
@@ -77,12 +119,23 @@ struct MediaItem: Identifiable, Hashable {
     let standard: MediaSource
     /// Higher-quality alternative, if the platform offers one.
     let best: MediaSource?
+    /// A ready-made audio-only stream (DASH audio, TikTok sound), if known.
+    var audio: MediaSource?
 
     func source(for preference: QualityPreference) -> MediaSource {
         if preference == .best, let best, best.pixelCount > standard.pixelCount || best.audioURL != nil {
             return best
         }
         return standard
+    }
+
+    /// Where "Save Audio" can get sound from without downloading the video.
+    var directAudio: MediaSource? {
+        if let audio { return audio }
+        if let audioURL = best?.audioURL {
+            return MediaSource(url: audioURL, width: 0, height: 0, codec: "mp4a", headers: best?.headers)
+        }
+        return nil
     }
 
     var aspectRatio: CGFloat {
@@ -99,6 +152,10 @@ struct MediaBundle: Identifiable {
     let caption: String?
     let sourceURL: URL
     let items: [MediaItem]
+    /// Stable identity of the post ("instagram:post:CODE") for duplicate detection.
+    var key: String?
+    /// When the post was published, if known.
+    var date: Date?
 
     var summary: String {
         let photos = items.filter { $0.kind == .photo }.count
@@ -108,11 +165,22 @@ struct MediaBundle: Identifiable {
         if videos > 0 { parts.append("\(videos) video\(videos == 1 ? "" : "s")") }
         return parts.joined(separator: " · ")
     }
+
+    var hashtags: [String] {
+        guard let caption else { return [] }
+        var tags: [String] = []
+        for word in caption.split(whereSeparator: { $0.isWhitespace || $0.isNewline }) where word.hasPrefix("#") && word.count > 1 {
+            let tag = String(word).trimmingCharacters(in: .punctuationCharacters.subtracting(CharacterSet(charactersIn: "#_")))
+            if tag.count > 1, !tags.contains(tag) { tags.append(tag) }
+        }
+        return tags
+    }
 }
 
 enum KeepsakeError: LocalizedError, Equatable {
     case unsupportedLink
     case loginRequired
+    case loginRequiredFor(Platform)
     case checkpoint
     case notFound
     case rateLimited
@@ -121,14 +189,17 @@ enum KeepsakeError: LocalizedError, Equatable {
     case offline
     case photosPermission
     case downloadFailed
+    case timedOut
     case server(String)
 
     var errorDescription: String? {
         switch self {
         case .unsupportedLink:
-            return "That link isn't from Instagram, Threads or Facebook, or it doesn't point to a post."
+            return "That link isn't from Instagram, Threads, Facebook or TikTok, or it doesn't point to a post."
         case .loginRequired:
             return "Instagram wants you to be logged in for this. Log in from Settings › Accounts."
+        case .loginRequiredFor(let platform):
+            return "\(platform.name) only shows this to logged-in people. Log in to \(platform.name) in Settings › Accounts, then try again."
         case .checkpoint:
             return "Instagram wants to confirm it's you. Open Settings › Accounts, log in again and finish the check."
         case .notFound:
@@ -145,8 +216,18 @@ enum KeepsakeError: LocalizedError, Equatable {
             return "Keepsake can't add to your Photos. Allow it in Settings › Keepsake › Photos."
         case .downloadFailed:
             return "The download didn't finish. Try again."
+        case .timedOut:
+            return "The page took too long to load. Try again."
         case .server(let message):
             return message
+        }
+    }
+
+    var needsLogin: Platform? {
+        switch self {
+        case .loginRequired, .checkpoint: return .instagram
+        case .loginRequiredFor(let platform): return platform
+        default: return nil
         }
     }
 

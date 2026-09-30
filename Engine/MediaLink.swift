@@ -7,14 +7,18 @@ enum MediaLink: Equatable {
     case instagramHighlight(id: String, itemID: String?)
     /// instagram.com/share/... or facebook share links; followed to find the real post.
     case redirect(URL)
+    case instagramProfile(username: String)
     case threadsPost(shortcode: String, url: URL)
+    case threadsProfile(username: String)
     case facebook(URL)
+    case tiktok(URL)
 
     var platform: Platform {
         switch self {
-        case .instagramPost, .instagramStory, .instagramHighlight: return .instagram
-        case .threadsPost: return .threads
+        case .instagramPost, .instagramStory, .instagramHighlight, .instagramProfile: return .instagram
+        case .threadsPost, .threadsProfile: return .threads
         case .facebook: return .facebook
+        case .tiktok: return .tiktok
         case .redirect(let url): return Self.platform(forHost: url.host) ?? .instagram
         }
     }
@@ -48,6 +52,7 @@ enum MediaLink: Equatable {
         if matches("instagram.com") || matches("instagr.am") { return .instagram }
         if matches("threads.net") || matches("threads.com") { return .threads }
         if matches("facebook.com") || matches("fb.watch") || matches("fb.com") || matches("fb.me") { return .facebook }
+        if matches("tiktok.com") { return .tiktok }
         return nil
     }
 
@@ -60,13 +65,19 @@ enum MediaLink: Equatable {
         case .instagram:
             return parseInstagram(url: url, parts: parts, query: query)
         case .threads:
-            // threads.com/share/ABC (short share link), threads.com/@user/post/CODE, threads.net/t/CODE
+            // threads.com/share/ABC (short share link), threads.com/@user/post/CODE, threads.net/t/CODE, threads.com/@user
             if parts.first == "share" { return .redirect(url) }
             for (index, part) in parts.enumerated() where (part == "post" || part == "t") && index + 1 < parts.count {
                 let code = parts[index + 1]
                 if isShortcode(code) { return .threadsPost(shortcode: code, url: url) }
             }
+            if parts.count == 1, parts[0].hasPrefix("@"), parts[0].count > 1 {
+                return .threadsProfile(username: String(parts[0].dropFirst()))
+            }
             return nil
+        case .tiktok:
+            // tiktok.com/@user/video/ID, /photo/ID, vm.tiktok.com/CODE, tiktok.com/t/CODE
+            return parts.isEmpty ? nil : .tiktok(url)
         case .facebook:
             let host = url.host?.lowercased() ?? ""
             if host.contains("fb.watch") || host.contains("fb.me") || parts.first == "share" {
@@ -98,6 +109,11 @@ enum MediaLink: Equatable {
             for i in 0..<min(parts.count - 1, 2) where kinds.contains(parts[i].lowercased()) {
                 if isShortcode(parts[i + 1]) { return .instagramPost(shortcode: parts[i + 1], url: url) }
             }
+            // instagram.com/username (a profile), but not app pages like /explore or /accounts.
+            let reserved: Set<String> = ["explore", "accounts", "direct", "reels", "about", "legal", "developer", "web", "api", "p", "reel", "tv", "stories", "s", "share"]
+            if parts.count == 1, isUsername(parts[0]), !reserved.contains(first) {
+                return .instagramProfile(username: parts[0])
+            }
             return nil
         }
     }
@@ -120,6 +136,18 @@ enum MediaLink: Equatable {
 
     static func isShortcode(_ s: String) -> Bool {
         !s.isEmpty && s.count <= 64 && s.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }
+    }
+
+    static func isUsername(_ s: String) -> Bool {
+        !s.isEmpty && s.count <= 30 && s.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "." || $0 == "_") }
+    }
+
+    /// True for links that lead to many posts (profiles) rather than one.
+    var isProfile: Bool {
+        switch self {
+        case .instagramProfile, .threadsProfile: return true
+        default: return false
+        }
     }
 
     static func isDigits(_ s: String) -> Bool {

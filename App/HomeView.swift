@@ -7,9 +7,10 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @Binding var selectedTab: RootView.Tab
-    @Binding var showAccounts: Bool
+    @Binding var loginPlatform: Platform?
 
     @State private var viewerIndex: ViewerSelection?
+    @State private var showBatch = false
     @FocusState private var fieldFocused: Bool
 
     private let columns = [GridItem(.adaptive(minimum: 104), spacing: 10)]
@@ -32,6 +33,8 @@ struct HomeView: View {
             .background { AuroraBackground() }
             .safeAreaInset(edge: .bottom) { bottomBar }
             .toolbar(.hidden, for: .navigationBar)
+            .overlay(alignment: .bottom) { toastView }
+            .sheet(isPresented: $showBatch) { BatchView() }
             .fullScreenCover(item: $viewerIndex) { selection in
                 if let bundle = model.bundle {
                     MediaViewer(bundle: bundle, startIndex: selection.index)
@@ -45,6 +48,23 @@ struct HomeView: View {
         }
         .sensoryFeedback(.success, trigger: model.successTick) { _, _ in settings.haptics }
         .sensoryFeedback(.error, trigger: model.errorTick) { _, _ in settings.haptics }
+        .sensoryFeedback(.impact(weight: .light), trigger: model.lightTick) { _, _ in settings.haptics }
+    }
+
+    @ViewBuilder
+    private var toastView: some View {
+        if let toast = model.toast {
+            Text(toast)
+                .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(.regularMaterial, in: Capsule())
+                .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
+                .padding(.bottom, model.bundle == nil ? 24 : 110)
+                .padding(.horizontal, 24)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 
     // MARK: - Header
@@ -56,11 +76,21 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(Brand.name)
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                Text("Save from Instagram, Threads & Facebook")
+                Text("Photos and videos in their best quality")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
+            Button {
+                showBatch = true
+            } label: {
+                Image(systemName: "square.stack.3d.down.right.fill")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Brand.blue)
+                    .frame(width: 42, height: 42)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .accessibilityLabel("Batch Save")
         }
         .padding(.top, 12)
     }
@@ -123,12 +153,14 @@ struct HomeView: View {
                     .opacity(model.linkText.isEmpty ? 0.55 : 1)
                 }
 
-                HStack(spacing: 8) {
-                    ForEach(Platform.allCases) { platform in
-                        PlatformBadge(platform: platform)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Platform.allCases) { platform in
+                            PlatformBadge(platform: platform)
+                        }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .scrollClipDisabled()
             }
         }
     }
@@ -200,11 +232,13 @@ struct HomeView: View {
                 }
                 Spacer()
             }
+            if let earlier = model.previousSave, model.phase == .ready {
+                duplicateBanner(earlier)
+            }
             if let caption = bundle.caption {
-                Text(caption)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
+                CaptionCard(caption: caption, hashtags: bundle.hashtags) { text, label in
+                    model.copy(text, confirmation: label)
+                }
             }
             if let error = model.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
@@ -226,14 +260,51 @@ struct HomeView: View {
                         } label: {
                             Label("Save to Photos", systemImage: "square.and.arrow.down")
                         }
-                        ShareLink(item: item.standard.url) {
-                            Label("Share Link", systemImage: "square.and.arrow.up")
+                        if item.kind == .video || item.audio != nil {
+                            Button {
+                                model.saveAudio(item)
+                            } label: {
+                                Label("Save Audio", systemImage: "waveform")
+                            }
+                        }
+                        if let caption = bundle.caption {
+                            Button {
+                                model.copy(caption, confirmation: "Caption copied")
+                            } label: {
+                                Label("Copy Caption", systemImage: "text.quote")
+                            }
+                        }
+                        Button {
+                            model.copy(bundle.sourceURL.absoluteString, confirmation: "Link copied")
+                        } label: {
+                            Label("Copy Link", systemImage: "link")
                         }
                     }
                 }
             }
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private func duplicateBanner(_ earlier: HistoryEntry) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.title3)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("You saved this \(earlier.date.formatted(.relative(presentation: .named)))")
+                    .font(.subheadline.weight(.semibold))
+                Text("Save it again, or check your Library.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Library") { selectedTab = .library }
+                .font(.subheadline.weight(.semibold))
+        }
+        .padding(14)
+        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     private func bestLabel(_ bundle: MediaBundle) -> String? {
@@ -252,8 +323,8 @@ struct HomeView: View {
                 HStack {
                     Button("Try Again") { model.fetch() }
                         .buttonStyle(.bordered)
-                    if model.lastError == .loginRequired || model.lastError == .checkpoint {
-                        Button("Log In to Instagram") { showAccounts = true }
+                    if let platform = model.lastError?.needsLogin {
+                        Button("Log In to \(platform.name)") { loginPlatform = platform }
                             .buttonStyle(.borderedProminent)
                             .tint(Brand.blue)
                     }
@@ -269,9 +340,10 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Three ways to save").font(.headline)
                 step("square.and.arrow.up", "From the share sheet",
-                     "In Instagram, Threads or Facebook tap Share, then Keepsake. It saves on its own.")
+                     "In Instagram, Threads, Facebook or TikTok tap Share, then Keepsake. It saves on its own.")
                 step("doc.on.clipboard", "Paste a link", "Copy a link, come back here and tap Paste.")
-                step("square.grid.2x2", "Pick what you want", "Tap any item to preview it and save just that one.")
+                step("square.grid.2x2", "Pick what you want", "Tap an item to preview it. Long-press for audio, caption and link.")
+                step("square.stack.3d.down.right", "Save lots at once", "Tap the stack button to paste many links or grab several accounts' stories.")
             }
         }
     }
@@ -348,13 +420,14 @@ struct HomeView: View {
                     }
                 case .done:
                     HStack(spacing: 12) {
-                        Label("Saved to Photos", systemImage: "checkmark.circle.fill")
+                        Label(settings.destination == .files ? "Saved to Files" : "Saved", systemImage: "checkmark.circle.fill")
                             .font(.headline)
                             .foregroundStyle(.green)
                             .symbolEffect(.bounce, value: model.successTick)
                         Spacer()
-                        Button("Open Photos") {
-                            if let url = URL(string: "photos-redirect://") { openURL(url) }
+                        Button(settings.destination == .files ? "Open Files" : "Open Photos") {
+                            let scheme = settings.destination == .files ? "shareddocuments://" : "photos-redirect://"
+                            if let url = URL(string: scheme) { openURL(url) }
                         }
                         .buttonStyle(.bordered)
                         Button("New") { model.reset() }
@@ -452,5 +525,72 @@ struct MediaTile: View {
                     .padding(6)
             }
         }
+    }
+}
+
+// MARK: - Caption
+
+/// The post's caption. Long-press (or tap Copy) to copy it; tap a hashtag chip to copy all tags.
+struct CaptionCard: View {
+    let caption: String
+    let hashtags: [String]
+    var onCopy: (String, String) -> Void
+
+    @State private var expanded = false
+    @State private var pressed = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Caption", systemImage: "text.quote")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    onCopy(caption, "Caption copied")
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderless)
+            }
+            Text(caption)
+                .font(.subheadline)
+                .lineLimit(expanded ? nil : 3)
+                .textSelection(.enabled)
+                .onTapGesture { withAnimation(.snappy) { expanded.toggle() } }
+            if !hashtags.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        Button {
+                            onCopy(hashtags.joined(separator: " "), "\(hashtags.count) hashtag\(hashtags.count == 1 ? "" : "s") copied")
+                        } label: {
+                            Label("Copy tags", systemImage: "number")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Brand.gradient, in: Capsule())
+                        }
+                        ForEach(hashtags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.primary.opacity(0.06), in: Capsule())
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .scaleEffect(pressed ? 0.98 : 1)
+        .onLongPressGesture(minimumDuration: 0.45, pressing: { isPressing in
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { pressed = isPressing }
+        }, perform: {
+            onCopy(caption, "Caption copied")
+        })
+        .accessibilityAction(named: "Copy caption") { onCopy(caption, "Caption copied") }
     }
 }

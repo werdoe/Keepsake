@@ -9,23 +9,26 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var tab: Tab = .save
-    @State private var showAccounts = false
+    @State private var loginPlatform: Platform?
 
     var body: some View {
         TabView(selection: $tab) {
-            HomeView(selectedTab: $tab, showAccounts: $showAccounts)
+            HomeView(selectedTab: $tab, loginPlatform: $loginPlatform)
                 .tabItem { Label("Save", systemImage: "arrow.down.circle.fill") }
                 .tag(Tab.save)
             LibraryView(selectedTab: $tab)
                 .tabItem { Label("Library", systemImage: "square.stack.fill") }
                 .tag(Tab.library)
-            SettingsView(showAccounts: $showAccounts)
+            SettingsView(loginPlatform: $loginPlatform)
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag(Tab.settings)
         }
         .tint(Brand.blue)
-        .sheet(isPresented: $showAccounts) {
-            InstagramLoginView { }
+        .background { CaptureHost().frame(width: 1, height: 1).allowsHitTesting(false) }
+        .sheet(item: $loginPlatform) { platform in
+            AccountLoginView(platform: platform) {
+                model.show("Logged in to \(platform.name)")
+            }
         }
         .fullScreenCover(isPresented: Binding(
             get: { !settings.hasOnboarded },
@@ -35,19 +38,48 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            history.reload()
-            Task { await InstagramSession.syncFromWebView() }
+            becameActive()
         }
+        .onAppear { becameActive() }
         .onOpenURL { url in handle(url) }
     }
 
-    /// keepsake://save?url=<link>  (usable from Shortcuts)
+    private func becameActive() {
+        history.reload()
+        FileStore.collectInbox()
+        model.handlePendingPasteSave()
+        Task { await AccountSession.syncFromWebView() }
+    }
+
+    /// keepsake://save?url=<link>   keepsake://open?url=<link>   keepsake://library   keepsake://paste
     private func handle(_ url: URL) {
         guard url.scheme == "keepsake" else { return }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        tab = .save
-        if let link = components?.queryItems?.first(where: { $0.name == "url" })?.value {
-            model.paste(link, autoSave: url.host == "save")
+        switch url.host {
+        case "library":
+            tab = .library
+        case "paste":
+            tab = .save
+            AppGroup.defaults.set(Date(), forKey: SaveModel.pendingPasteKey)
+            model.handlePendingPasteSave()
+        default:
+            tab = .save
+            if let link = components?.queryItems?.first(where: { $0.name == "url" })?.value {
+                model.paste(link, autoSave: url.host == "save")
+            }
         }
     }
+}
+
+/// An invisible view the hidden capture browser can live in while it loads pages.
+private struct CaptureHost: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+        view.isUserInteractionEnabled = false
+        view.clipsToBounds = true
+        WebCapture.hostView = view
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
 }

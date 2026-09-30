@@ -1,153 +1,270 @@
 import ActivityKit
+import LocalAuthentication
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var history: HistoryStore
+    @EnvironmentObject private var model: SaveModel
     @ObservedObject private var network = NetworkMonitor.shared
-    @Binding var showAccounts: Bool
+    @Binding var loginPlatform: Platform?
 
-    @State private var loggedIn = InstagramExtractor.isLoggedIn
+    @State private var loggedIn: Set<Platform> = []
     @State private var confirmClear = false
+    @State private var backupURL: URL?
+    @State private var showImporter = false
 
     private var activitiesEnabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Picker("Quality", selection: $settings.quality) {
-                        ForEach(QualityPreference.allCases) { q in Text(q.title).tag(q) }
-                    }
-                    .pickerStyle(.segmented)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-
-                    Toggle(isOn: $settings.wifiOnly) {
-                        settingLabel("Wi-Fi only", "wifi", .blue)
-                    }
-                    Toggle(isOn: $settings.saveToAlbum) {
-                        settingLabel("Save into “Keepsake” album", "rectangle.stack.badge.plus", .indigo)
-                    }
-                } header: {
-                    Text("Downloads")
-                } footer: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(settings.quality.detail)
-                        Label(network.label, systemImage: network.symbol)
-                            .foregroundStyle(settings.wifiOnly && network.kind == .cellular ? .orange : .secondary)
-                        if settings.saveToAlbum {
-                            Text("Keeping saves in an album needs full Photos access. If you allow only “Add Photos”, they still save to Recents.")
-                        }
-                    }
-                }
-
-                Section {
-                    Toggle(isOn: $settings.shareAutoSave) {
-                        settingLabel("Save automatically", "bolt.fill", .orange)
-                    }
-                    NavigationLink {
-                        ShareSetupView()
-                    } label: {
-                        settingLabel("Add Keepsake to the share sheet", "square.and.arrow.up", .teal)
-                    }
-                } header: {
-                    Text("Share Sheet")
-                } footer: {
-                    Text(settings.shareAutoSave
-                         ? "Sharing a link to Keepsake saves everything right away."
-                         : "Sharing a link to Keepsake shows a preview first.")
-                }
-
-                Section {
-                    Toggle(isOn: $settings.liveActivities) {
-                        settingLabel("Progress in Dynamic Island", "capsule.fill", .purple)
-                    }
-                } header: {
-                    Text("Live Activity")
-                } footer: {
-                    if !activitiesEnabled {
-                        Text("Live Activities are turned off for Keepsake in iOS Settings › Keepsake.")
-                    } else {
-                        Text("Shows download progress in the Dynamic Island and on the Lock Screen when you leave the app.")
-                    }
-                }
-
-                Section {
-                    Button {
-                        if loggedIn {
-                            Task {
-                                await InstagramSession.logOut()
-                                withAnimation { loggedIn = InstagramExtractor.isLoggedIn }
-                            }
-                        } else {
-                            showAccounts = true
-                        }
-                    } label: {
-                        HStack {
-                            settingLabel("Instagram", Platform.instagram.symbol, Platform.instagram.tint)
-                            Spacer()
-                            Text(loggedIn ? "Log Out" : "Log In")
-                                .foregroundStyle(loggedIn ? .red : Brand.blue)
-                        }
-                    }
-                    .foregroundStyle(.primary)
-                } header: {
-                    Text("Accounts")
-                } footer: {
-                    Text("Only needed for Instagram stories, highlights and private accounts you follow. Threads and Facebook work without logging in. Consider a spare account: Instagram may flag accounts that download a lot.")
-                }
-
-                Section("General") {
-                    Toggle(isOn: $settings.haptics) {
-                        settingLabel("Haptics", "hand.tap.fill", .pink)
-                    }
-                    Toggle(isOn: $settings.keepHistory) {
-                        settingLabel("Keep a Library of saves", "clock.arrow.circlepath", .green)
-                    }
-                    Button(role: .destructive) {
-                        confirmClear = true
-                    } label: {
-                        settingLabel("Clear Library", "trash", .red)
-                    }
-                    .disabled(history.entries.isEmpty)
-                    Button {
-                        settings.hasOnboarded = false
-                    } label: {
-                        settingLabel("Show Welcome Again", "sparkles", .yellow)
-                    }
-                    .foregroundStyle(.primary)
-                }
-
-                Section {
-                    NavigationLink {
-                        SupportedLinksView()
-                    } label: {
-                        settingLabel("Supported Links", "link", .gray)
-                    }
-                    HStack {
-                        settingLabel("Version", "info.circle", .gray)
-                        Spacer()
-                        Text(appVersion).foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("About")
-                } footer: {
-                    Text("Keepsake is for personal use. Only save what you have the right to keep, and ask before reposting other people's work.")
-                        .padding(.top, 8)
-                }
+                downloadsSection
+                photoInfoSection
+                shareSection
+                liveActivitySection
+                accountsSection
+                privacySection
+                librarySection
+                aboutSection
             }
             .navigationTitle("Settings")
             .confirmationDialog("Clear your Library?", isPresented: $confirmClear, titleVisibility: .visible) {
                 Button("Clear Library", role: .destructive) { history.clear() }
             } message: {
-                Text("Your photos and videos stay in Photos.")
+                Text("Your photos and videos stay where they were saved.")
             }
-            .onChange(of: showAccounts) { _, showing in
-                if !showing { loggedIn = InstagramExtractor.isLoggedIn }
+            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
+                switch result {
+                case .success(let url):
+                    do {
+                        let added = try history.importBackup(from: url)
+                        model.show(added == 0 ? "Nothing new in that backup" : "Restored \(added) save\(added == 1 ? "" : "s")")
+                    } catch {
+                        model.show("That file isn't a Keepsake Library backup.")
+                    }
+                case .failure:
+                    break
+                }
             }
-            .onAppear { loggedIn = InstagramExtractor.isLoggedIn }
+            .onChange(of: loginPlatform) { _, platform in
+                if platform == nil { refreshLogins() }
+            }
+            .onAppear { refreshLogins() }
         }
+    }
+
+    // MARK: - Sections
+
+    private var downloadsSection: some View {
+        Section {
+            Picker("Quality", selection: $settings.quality) {
+                ForEach(QualityPreference.allCases) { q in Text(q.title).tag(q) }
+            }
+            .pickerStyle(.segmented)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+
+            Picker(selection: $settings.destination) {
+                ForEach(SaveDestination.allCases) { d in Text(d.title).tag(d) }
+            } label: {
+                settingLabel("Save to", "tray.and.arrow.down.fill", .teal)
+            }
+
+            Toggle(isOn: $settings.wifiOnly) {
+                settingLabel("Wi-Fi only", "wifi", .blue)
+            }
+            if settings.destination.includesPhotos {
+                Toggle(isOn: $settings.saveToAlbum) {
+                    settingLabel("Save into “Keepsake” album", "rectangle.stack.badge.plus", .indigo)
+                }
+            }
+        } header: {
+            Text("Downloads")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(settings.quality.detail)
+                Text(settings.destination.detail)
+                Label(network.label, systemImage: network.symbol)
+                    .foregroundStyle(settings.wifiOnly && network.kind == .cellular ? .orange : .secondary)
+                if settings.saveToAlbum && settings.destination.includesPhotos {
+                    Text("An album needs full Photos access. If you only allow “Add Photos”, saves go to Recents.")
+                }
+            }
+        }
+    }
+
+    private var photoInfoSection: some View {
+        Section {
+            Toggle(isOn: $settings.embedCaption) {
+                settingLabel("Add caption & link to photos", "text.quote", .orange)
+            }
+            Toggle(isOn: $settings.keepOriginalDate) {
+                settingLabel("Use the post's date", "calendar", .red)
+            }
+        } header: {
+            Text("Photo Info")
+        } footer: {
+            Text("The caption and original link are written into each photo's details. With “Use the post's date”, saves sit in Photos at the date they were posted, not the day you saved them.")
+        }
+    }
+
+    private var shareSection: some View {
+        Section {
+            Toggle(isOn: $settings.shareAutoSave) {
+                settingLabel("Save automatically", "bolt.fill", .orange)
+            }
+            NavigationLink {
+                ShareSetupView()
+            } label: {
+                settingLabel("Add Keepsake to the share sheet", "square.and.arrow.up", .teal)
+            }
+        } header: {
+            Text("Share Sheet")
+        } footer: {
+            Text(settings.shareAutoSave
+                 ? "Sharing a link to Keepsake saves everything right away."
+                 : "Sharing a link to Keepsake shows a preview first.")
+        }
+    }
+
+    private var liveActivitySection: some View {
+        Section {
+            Toggle(isOn: $settings.liveActivities) {
+                settingLabel("Progress in Dynamic Island", "capsule.fill", .purple)
+            }
+        } header: {
+            Text("Live Activity")
+        } footer: {
+            Text(activitiesEnabled
+                 ? "Shows download progress in the Dynamic Island and on the Lock Screen. Downloads keep going when you leave the app."
+                 : "Live Activities are turned off for Keepsake in iOS Settings › Keepsake.")
+        }
+    }
+
+    private var accountsSection: some View {
+        Section {
+            ForEach([Platform.instagram, .threads, .facebook]) { platform in
+                Button {
+                    if loggedIn.contains(platform) {
+                        Task {
+                            await AccountSession.logOut(platform)
+                            withAnimation { refreshLogins() }
+                        }
+                    } else {
+                        loginPlatform = platform
+                    }
+                } label: {
+                    HStack {
+                        settingLabel(platform.name, platform.symbol, platform.tint == .primary ? .gray : platform.tint)
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(loggedIn.contains(platform) ? "Log Out" : "Log In")
+                                .foregroundStyle(loggedIn.contains(platform) ? .red : Brand.blue)
+                            Text(platform.loginHelp)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .foregroundStyle(.primary)
+            }
+        } header: {
+            Text("Accounts")
+        } footer: {
+            Text("Optional. Public posts and TikTok work without logging in. Logging in lets Keepsake open private and friends-only posts the way the app would. Consider spare accounts: platforms may flag accounts that download a lot.")
+        }
+    }
+
+    private var privacySection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { settings.lockLibrary },
+                set: { newValue in
+                    // Confirm it's you before turning the lock on or off.
+                    Task {
+                        if await LibraryLock.authenticate(reason: newValue ? "Lock your Library" : "Unlock your Library") {
+                            settings.lockLibrary = newValue
+                        }
+                    }
+                })) {
+                settingLabel("Lock Library with \(LibraryLock.biometryName)", LibraryLock.biometrySymbol, .green)
+            }
+            Toggle(isOn: $settings.haptics) {
+                settingLabel("Haptics", "hand.tap.fill", .pink)
+            }
+        } header: {
+            Text("Privacy & Feel")
+        }
+    }
+
+    private var librarySection: some View {
+        Section {
+            Toggle(isOn: $settings.keepHistory) {
+                settingLabel("Keep a Library of saves", "clock.arrow.circlepath", .green)
+            }
+            Button {
+                backupURL = try? history.exportBackup()
+            } label: {
+                settingLabel("Back Up Library", "externaldrive.fill.badge.icloud", .blue)
+            }
+            .foregroundStyle(.primary)
+            .disabled(history.entries.isEmpty)
+            if let backupURL {
+                ShareLink(item: backupURL) {
+                    Label("Save or Send Backup…", systemImage: "square.and.arrow.up")
+                }
+            }
+            Button {
+                showImporter = true
+            } label: {
+                settingLabel("Restore from Backup", "arrow.down.doc.fill", .indigo)
+            }
+            .foregroundStyle(.primary)
+            Button(role: .destructive) {
+                confirmClear = true
+            } label: {
+                settingLabel("Clear Library", "trash", .red)
+            }
+            .disabled(history.entries.isEmpty)
+        } header: {
+            Text("Library")
+        } footer: {
+            Text("A backup is one file with your Library and thumbnails. Keep it in iCloud Drive, or restore it on another iPhone. Automatic iCloud sync isn't possible for sideloaded apps.")
+        }
+    }
+
+    private var aboutSection: some View {
+        Section {
+            NavigationLink {
+                SupportedLinksView()
+            } label: {
+                settingLabel("Supported Links", "link", .gray)
+            }
+            Button {
+                settings.hasOnboarded = false
+            } label: {
+                settingLabel("Show Welcome Again", "sparkles", .yellow)
+            }
+            .foregroundStyle(.primary)
+            HStack {
+                settingLabel("Version", "info.circle", .gray)
+                Spacer()
+                Text(appVersion).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("About")
+        } footer: {
+            Text("Keepsake is for personal use. Only save what you have the right to keep, and ask before reposting other people's work.")
+                .padding(.top, 8)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func refreshLogins() {
+        loggedIn = Set(Platform.allCases.filter { Accounts.isLoggedIn($0) })
     }
 
     private var appVersion: String {
@@ -169,6 +286,37 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Face ID / passcode
+
+enum LibraryLock {
+    static func authenticate(reason: String) async -> Bool {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else { return true }
+        return (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) ?? false
+    }
+
+    static var biometryName: String {
+        let context = LAContext()
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        switch context.biometryType {
+        case .faceID: return "Face ID"
+        case .touchID: return "Touch ID"
+        default: return "Passcode"
+        }
+    }
+
+    static var biometrySymbol: String {
+        let context = LAContext()
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        switch context.biometryType {
+        case .faceID: return "faceid"
+        case .touchID: return "touchid"
+        default: return "lock.fill"
+        }
+    }
+}
+
 // MARK: - Share sheet setup guide
 
 struct ShareSetupView: View {
@@ -179,8 +327,8 @@ struct ShareSetupView: View {
             VStack(spacing: 24) {
                 shareSheetMock
                 VStack(alignment: .leading, spacing: 16) {
-                    guideStep(1, "In Instagram, Threads or Facebook, tap Share on a post, reel or story.")
-                    guideStep(2, "Choose “Share to…” or “More” to open the iOS share sheet.")
+                    guideStep(1, "In Instagram, Threads, Facebook or TikTok, tap Share on a post, reel, video or story.")
+                    guideStep(2, "Choose “Share to…”, “More” or “Other” to open the iOS share sheet.")
                     guideStep(3, "Scroll the row of apps to the end and tap More.")
                     guideStep(4, "Tap Edit, add Keepsake to Favourites and drag it near the top.")
                     guideStep(5, "Next time, just tap Keepsake. It saves on its own.")
@@ -255,7 +403,7 @@ struct SupportedLinksView: View {
                 }
             }
             Section {
-                Text("Facebook stories and private posts aren't available to Keepsake, because Facebook only shows them to its own app.")
+                Text("Profile links save the latest posts. Share links (…/share/…) are followed automatically. Private accounts need you to log in and follow them.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -265,9 +413,10 @@ struct SupportedLinksView: View {
 
     private func example(for platform: Platform) -> String {
         switch platform {
-        case .instagram: return "instagram.com/p/…  /reel/…  /stories/…"
-        case .threads: return "threads.com/@user/post/…"
-        case .facebook: return "facebook.com/reel/…  /watch?v=…  fb.watch/…"
+        case .instagram: return "instagram.com/p/…  /reel/…  /stories/…  /username"
+        case .threads: return "threads.com/@user/post/…  /share/…  /@user"
+        case .facebook: return "facebook.com/reel/…  /watch?v=…  /share/…  fb.watch/…"
+        case .tiktok: return "tiktok.com/@user/video/…  vm.tiktok.com/…"
         }
     }
 }

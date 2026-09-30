@@ -1,7 +1,8 @@
 import Foundation
 import UIKit
+import WidgetKit
 
-/// One saved link, shown in the Library.
+/// One saved link, shown in the Library and the widgets.
 struct HistoryEntry: Identifiable, Codable, Hashable {
     var id = UUID()
     var date: Date
@@ -14,6 +15,8 @@ struct HistoryEntry: Identifiable, Codable, Hashable {
     var thumbnailFile: String?
     var assetIdentifiers: [String]
     var qualityLabel: String?
+    /// Identity of the post, for "you already saved this".
+    var sourceKey: String?
 
     var itemCount: Int { photoCount + videoCount }
 
@@ -22,13 +25,13 @@ struct HistoryEntry: Identifiable, Codable, Hashable {
     }
 }
 
-/// Download history, stored as JSON in the shared app group so share-sheet saves appear too.
+/// Download history, stored as JSON in the shared app group so share-sheet saves and widgets see it.
 final class HistoryStore: ObservableObject {
     static let shared = HistoryStore()
 
     @Published private(set) var entries: [HistoryEntry] = []
 
-    private let fileURL = AppGroup.dataDirectory.appendingPathComponent("history.json")
+    private static var fileURL: URL { AppGroup.dataDirectory.appendingPathComponent("history.json") }
     static var thumbnailsDirectory: URL {
         let dir = AppGroup.dataDirectory.appendingPathComponent("Thumbnails", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -37,11 +40,16 @@ final class HistoryStore: ObservableObject {
 
     private init() { reload() }
 
+    /// Reads entries straight from disk (used by widgets, which don't keep a store around).
+    static func readEntries() -> [HistoryEntry] {
+        guard let data = try? Data(contentsOf: fileURL),
+              let decoded = try? JSONDecoder().decode([HistoryEntry].self, from: data) else { return [] }
+        return decoded.sorted { $0.date > $1.date }
+    }
+
     /// Re-reads from disk (the share extension may have added entries).
     func reload() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let decoded = try? JSONDecoder().decode([HistoryEntry].self, from: data) else { return }
-        let sorted = decoded.sorted { $0.date > $1.date }
+        let sorted = Self.readEntries()
         if Thread.isMainThread {
             entries = sorted
         } else {
@@ -49,16 +57,22 @@ final class HistoryStore: ObservableObject {
         }
     }
 
+    /// The most recent save of the same post, if any.
+    func previousSave(of key: String?) -> HistoryEntry? {
+        guard let key else { return nil }
+        return Self.readEntries().first { $0.sourceKey == key }
+    }
+
     func add(_ entry: HistoryEntry) {
-        var all = readFromDisk()
+        var all = Self.readEntries()
         all.insert(entry, at: 0)
-        if all.count > 500 { all = Array(all.prefix(500)) }
+        if all.count > 1000 { all = Array(all.prefix(1000)) }
         write(all)
     }
 
     func remove(_ entry: HistoryEntry) {
         if let file = entry.thumbnailURL { try? FileManager.default.removeItem(at: file) }
-        write(readFromDisk().filter { $0.id != entry.id })
+        write(Self.readEntries().filter { $0.id != entry.id })
     }
 
     func clear() {
@@ -66,15 +80,69 @@ final class HistoryStore: ObservableObject {
         write([])
     }
 
-    /// Stores a small JPEG preview for the Library grid.
-    static func storeThumbnail(from url: URL) async -> String? {
-        guard let (data, _) = try? await URLSession.shared.data(from: url),
+    // MARK: - Backup (a single file you can keep in iCloud Drive or send to another phone)
+
+    private struct Backup: Codable {
+        var version = 1
+        var exported: Date
+        var entries: [HistoryEntry]
+        var thumbnails: [String: Data]
+    }
+
+    func exportBackup() throws -> URL {
+        let all = Self.readEntries()
+        var thumbnails: [String: Data] = [:]
+        for entry in all {
+            if let name = entry.thumbnailFile, let url = entry.thumbnailURL, let data = try? Data(contentsOf: url) {
+                thumbnails[name] = data
+            }
+        }
+        let backup = Backup(exported: Date(), entries: all, thumbnails: thumbnails)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Keepsake Library \(formatter.string(from: Date()))")
+            .appendingPathExtension("json")
+        try JSONEncoder().encode(backup).write(to: url, options: .atomic)
+        return url
+    }
+
+    /// Merges a backup into the Library. Returns how many entries were added.
+    @discardableResult
+    func importBackup(from url: URL) throws -> Int {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        let backup = try JSONDecoder().decode(Backup.self, from: Data(contentsOf: url))
+        var all = Self.readEntries()
+        let existing = Set(all.map(\.id))
+        var added = 0
+        for entry in backup.entries where !existing.contains(entry.id) {
+            if let name = entry.thumbnailFile, let data = backup.thumbnails[name] {
+                try? data.write(to: Self.thumbnailsDirectory.appendingPathComponent(name))
+            }
+            all.append(entry)
+            added += 1
+        }
+        write(all.sorted { $0.date > $1.date })
+        return added
+    }
+
+    // MARK: - Thumbnails
+
+    /// Stores a small JPEG preview for the Library grid and widgets.
+    static func storeThumbnail(from url: URL, headers: [String: String]?) async -> String? {
+        var request = URLRequest(url: url)
+        for (name, value) in headers ?? [:] { request.setValue(value, forHTTPHeaderField: name) }
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
               let image = UIImage(data: data) else { return nil }
         let maxSide: CGFloat = 480
         let scale = min(1, maxSide / max(image.size.width, image.size.height))
         let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let small = renderer.image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let small = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
         guard let jpeg = small.jpegData(compressionQuality: 0.8) else { return nil }
         let name = UUID().uuidString + ".jpg"
         do {
@@ -85,18 +153,11 @@ final class HistoryStore: ObservableObject {
         }
     }
 
-    private func readFromDisk() -> [HistoryEntry] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        return (try? JSONDecoder().decode([HistoryEntry].self, from: data)) ?? []
-    }
-
     private func write(_ all: [HistoryEntry]) {
         if let data = try? JSONEncoder().encode(all) {
-            try? data.write(to: fileURL, options: .atomic)
+            try? data.write(to: Self.fileURL, options: .atomic)
         }
         reload()
-        if all.isEmpty {
-            if Thread.isMainThread { entries = [] } else { DispatchQueue.main.async { self.entries = [] } }
-        }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

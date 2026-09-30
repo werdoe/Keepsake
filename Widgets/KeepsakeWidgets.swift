@@ -5,7 +5,11 @@ import WidgetKit
 @main
 struct KeepsakeWidgets: WidgetBundle {
     var body: some Widget {
+        RecentSavesWidget()
         DownloadLiveActivity()
+        if #available(iOS 18.0, *) {
+            PasteSaveControl()
+        }
     }
 }
 

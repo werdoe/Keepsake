@@ -34,6 +34,12 @@ enum MetaMediaParser {
         return nil
     }
 
+    /// Publish time (`taken_at`, seconds since 1970).
+    static func date(of media: [String: Any]) -> Date? {
+        let seconds = HTTP.int(media["taken_at"])
+        return seconds > 0 ? Date(timeIntervalSince1970: TimeInterval(seconds)) : nil
+    }
+
     private static func bestCandidate(_ list: [[String: Any]]) -> MediaSource? {
         list.compactMap { c -> MediaSource? in
             guard let url = HTTP.url(c["url"]) else { return nil }

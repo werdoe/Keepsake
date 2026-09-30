@@ -3,7 +3,11 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject private var history: HistoryStore
     @EnvironmentObject private var model: SaveModel
+    @EnvironmentObject private var settings: AppSettings
+    @Environment(\.scenePhase) private var scenePhase
     @Binding var selectedTab: RootView.Tab
+
+    @State private var unlocked = false
 
     @State private var search = ""
     @State private var selected: HistoryEntry?
@@ -22,6 +26,52 @@ struct LibraryView: View {
     }
 
     var body: some View {
+        Group {
+            if settings.lockLibrary && !unlocked {
+                lockedView
+            } else {
+                library
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { unlocked = false }
+        }
+    }
+
+    private var lockedView: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Image(systemName: LibraryLock.biometrySymbol)
+                .font(.system(size: 54, weight: .light))
+                .foregroundStyle(Brand.gradient)
+                .symbolEffect(.pulse, options: .repeating)
+            Text("Library is locked").font(.title2.weight(.bold))
+            Text("Unlock with \(LibraryLock.biometryName) to see your saves.")
+                .foregroundStyle(.secondary)
+            Button {
+                unlock()
+            } label: {
+                Label("Unlock", systemImage: "lock.open.fill")
+            }
+            .buttonStyle(GradientButtonStyle(height: 50))
+            .frame(maxWidth: 240)
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(AuroraBackground(intensity: 0.8))
+        .onAppear { unlock() }
+    }
+
+    private func unlock() {
+        Task {
+            if await LibraryLock.authenticate(reason: "Unlock your Library") {
+                withAnimation(.snappy) { unlocked = true }
+            }
+        }
+    }
+
+    private var library: some View {
         NavigationStack {
             Group {
                 if history.entries.isEmpty {
@@ -185,8 +235,15 @@ private struct HistoryDetail: View {
     var onSaveAgain: () -> Void
 
     @EnvironmentObject private var history: HistoryStore
+    @EnvironmentObject private var settings: AppSettings
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
+    @State private var copiedMessage: String?
+    @State private var copyTick = 0
+
+    private func hashtags(in caption: String) -> [String] {
+        MediaBundle(platform: entry.platform, title: "", caption: caption, sourceURL: entry.sourceURL, items: []).hashtags
+    }
 
     var body: some View {
         ScrollView {
@@ -208,7 +265,18 @@ private struct HistoryDetail: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     if let caption = entry.caption {
-                        Text(caption).font(.callout).foregroundStyle(.secondary).padding(.top, 4)
+                        CaptionCard(caption: caption, hashtags: hashtags(in: caption)) { text, label in
+                            UIPasteboard.general.string = text
+                            copiedMessage = label
+                            copyTick += 1
+                        }
+                        .padding(.top, 4)
+                    }
+                    if let copiedMessage {
+                        Label(copiedMessage, systemImage: "checkmark.circle.fill")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.green)
+                            .transition(.opacity)
                     }
                 }
 
@@ -246,7 +314,9 @@ private struct HistoryDetail: View {
                 }
             }
             .padding(20)
+            .animation(.snappy, value: copiedMessage)
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: copyTick) { _, _ in settings.haptics }
     }
 
     private var summary: String {
