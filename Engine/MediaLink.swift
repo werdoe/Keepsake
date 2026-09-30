@@ -60,7 +60,8 @@ enum MediaLink: Equatable {
         case .instagram:
             return parseInstagram(url: url, parts: parts, query: query)
         case .threads:
-            // threads.com/@user/post/CODE, threads.net/t/CODE
+            // threads.com/share/ABC (short share link), threads.com/@user/post/CODE, threads.net/t/CODE
+            if parts.first == "share" { return .redirect(url) }
             for (index, part) in parts.enumerated() where (part == "post" || part == "t") && index + 1 < parts.count {
                 let code = parts[index + 1]
                 if isShortcode(code) { return .threadsPost(shortcode: code, url: url) }
