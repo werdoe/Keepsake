@@ -17,8 +17,21 @@ struct HistoryEntry: Identifiable, Codable, Hashable {
     var qualityLabel: String?
     /// Identity of the post, for "you already saved this".
     var sourceKey: String?
+    /// Copies saved to Files, relative to the app's Documents folder.
+    var filePaths: [String]?
+    var isFavorite: Bool?
 
     var itemCount: Int { photoCount + videoCount }
+    var favorite: Bool { isFavorite ?? false }
+
+    /// The account this came from ("@user"), used to group the Library into folders.
+    var account: String { title }
+
+    var fileURLs: [URL] {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return (filePaths ?? []).map { documents.appendingPathComponent($0) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
 
     var thumbnailURL: URL? {
         thumbnailFile.map { HistoryStore.thumbnailsDirectory.appendingPathComponent($0) }
@@ -67,6 +80,13 @@ final class HistoryStore: ObservableObject {
         var all = Self.readEntries()
         all.insert(entry, at: 0)
         if all.count > 1000 { all = Array(all.prefix(1000)) }
+        write(all)
+    }
+
+    func toggleFavorite(_ entry: HistoryEntry) {
+        var all = Self.readEntries()
+        guard let index = all.firstIndex(where: { $0.id == entry.id }) else { return }
+        all[index].isFavorite = !(all[index].isFavorite ?? false)
         write(all)
     }
 

@@ -15,13 +15,21 @@ enum FileStore {
         return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
-    static func save(_ file: URL, kind: MediaItem.Kind, platform: Platform, title: String, index: Int, date: Date) throws -> URL {
+    /// Saves into Keepsake › Platform › Account and returns the path relative to Documents.
+    static func save(_ file: URL, kind: MediaItem.Kind, platform: Platform, title: String, index: Int, date: Date) throws -> String {
         let folder = root.appendingPathComponent(platform.name, isDirectory: true)
+            .appendingPathComponent(folderName(title), isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let ext = file.pathExtension.isEmpty ? (kind == .video ? "mp4" : "jpg") : file.pathExtension
         let destination = uniqueURL(in: folder, base: fileName(title: title, index: index, date: date), ext: ext)
         try FileManager.default.copyItem(at: file, to: destination)
-        return destination
+        return destination.path.replacingOccurrences(of: root.path + "/", with: "")
+    }
+
+    private static func folderName(_ title: String) -> String {
+        let cleaned = title.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "Other" : String(cleaned.prefix(60))
     }
 
     /// Saves an audio file into Files › Keepsake › Audio.

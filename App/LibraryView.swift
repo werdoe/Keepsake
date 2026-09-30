@@ -8,6 +8,13 @@ struct LibraryView: View {
     @Binding var selectedTab: RootView.Tab
 
     @State private var unlocked = false
+    @State private var mode: Mode = .saves
+    @State private var favoritesOnly = false
+
+    enum Mode: String, CaseIterable, Identifiable {
+        case saves = "Saves", accounts = "Accounts"
+        var id: String { rawValue }
+    }
 
     @State private var search = ""
     @State private var selected: HistoryEntry?
@@ -19,6 +26,7 @@ struct LibraryView: View {
     private var filtered: [HistoryEntry] {
         history.entries.filter { entry in
             (filter == nil || entry.platform == filter)
+                && (!favoritesOnly || entry.favorite)
                 && (search.isEmpty
                     || entry.title.localizedCaseInsensitiveContains(search)
                     || (entry.caption?.localizedCaseInsensitiveContains(search) ?? false))
@@ -90,36 +98,18 @@ struct LibraryView: View {
                     }
                 } else {
                     ScrollView {
-                        filterBar
-                        LazyVGrid(columns: columns, spacing: 12) {
-                            ForEach(filtered) { entry in
-                                Button {
-                                    selected = entry
-                                } label: {
-                                    HistoryCard(entry: entry)
-                                }
-                                .buttonStyle(PressableStyle())
-                                .contextMenu {
-                                    Link(destination: entry.sourceURL) {
-                                        Label("Open Original", systemImage: "safari")
-                                    }
-                                    Button {
-                                        UIPasteboard.general.url = entry.sourceURL
-                                    } label: {
-                                        Label("Copy Link", systemImage: "link")
-                                    }
-                                    Button(role: .destructive) {
-                                        withAnimation(.snappy) { history.remove(entry) }
-                                    } label: {
-                                        Label("Remove", systemImage: "trash")
-                                    }
-                                }
-                                .transition(.scale(scale: 0.9).combined(with: .opacity))
-                            }
+                        Picker("View", selection: $mode) {
+                            ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
                         }
+                        .pickerStyle(.segmented)
                         .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
-                        .animation(.snappy, value: filtered)
+                        .padding(.top, 4)
+                        filterBar
+                        if mode == .saves {
+                            SavesGrid(entries: filtered) { selected = $0 }
+                        } else {
+                            accountsGrid
+                        }
                     }
                     .searchable(text: $search, prompt: "Search saves")
                 }
@@ -156,6 +146,32 @@ struct LibraryView: View {
         .onAppear { history.reload() }
     }
 
+    // MARK: - Accounts
+
+    private var accountGroups: [AccountGroup] {
+        let grouped = Dictionary(grouping: filtered) { "\($0.platform.rawValue)|\($0.account)" }
+        return grouped.map { key, entries in
+            AccountGroup(id: key, name: entries[0].account, platform: entries[0].platform,
+                         entries: entries.sorted { $0.date > $1.date })
+        }
+        .sorted { ($0.entries.first?.date ?? .distantPast) > ($1.entries.first?.date ?? .distantPast) }
+    }
+
+    private var accountsGrid: some View {
+        LazyVGrid(columns: columns, spacing: 14) {
+            ForEach(accountGroups) { group in
+                NavigationLink {
+                    AccountDetailView(group: group) { selected = $0 }
+                } label: {
+                    AccountFolderCard(group: group)
+                }
+                .buttonStyle(PressableStyle())
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+    }
+
     /// Filter chips that fit the width: names when there's room, otherwise the selected
     /// platform keeps its name and the others show just their icon.
     private var filterBar: some View {
@@ -169,7 +185,13 @@ struct LibraryView: View {
 
     private func filterRow(compact: Bool) -> some View {
         HStack(spacing: 8) {
-            chip(title: "All", symbol: "square.grid.2x2", isOn: filter == nil, iconOnly: false) { filter = nil }
+            chip(title: "All", symbol: "square.grid.2x2", isOn: filter == nil && !favoritesOnly, iconOnly: false) {
+                filter = nil
+                favoritesOnly = false
+            }
+            chip(title: "Favourites", symbol: "heart.fill", isOn: favoritesOnly, iconOnly: compact && !favoritesOnly) {
+                favoritesOnly.toggle()
+            }
             ForEach(Platform.allCases) { platform in
                 chip(title: platform.name, symbol: platform.symbol, isOn: filter == platform,
                      iconOnly: compact && filter != platform) {
@@ -197,7 +219,7 @@ struct LibraryView: View {
     }
 }
 
-private struct HistoryCard: View {
+struct HistoryCard: View {
     let entry: HistoryEntry
 
     var body: some View {
@@ -235,6 +257,16 @@ private struct HistoryCard: View {
                         .padding(8)
                 }
             }
+            .overlay(alignment: .bottomTrailing) {
+                if entry.favorite {
+                    Image(systemName: "heart.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.pink)
+                        .padding(6)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .padding(8)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             // Thumbnails are scaled to fill and spill past the card; keep taps inside the card.
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -242,7 +274,7 @@ private struct HistoryCard: View {
     }
 }
 
-private struct HistoryDetail: View {
+struct HistoryDetail: View {
     let entry: HistoryEntry
     var onSaveAgain: () -> Void
 
@@ -336,5 +368,172 @@ private struct HistoryDetail: View {
         if entry.photoCount > 0 { parts.append("\(entry.photoCount) photo\(entry.photoCount == 1 ? "" : "s")") }
         if entry.videoCount > 0 { parts.append("\(entry.videoCount) video\(entry.videoCount == 1 ? "" : "s")") }
         return parts.joined(separator: ", ")
+    }
+}
+
+// MARK: - Grids, folders and account pages
+
+/// A grid of saves. Tapping one opens the full-screen viewer, which swipes through this grid.
+struct SavesGrid: View {
+    let entries: [HistoryEntry]
+    var onDetails: (HistoryEntry) -> Void
+
+    @EnvironmentObject private var history: HistoryStore
+    @EnvironmentObject private var settings: AppSettings
+    @State private var viewerStart: ViewerStart?
+
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(entries) { entry in
+                Button {
+                    viewerStart = ViewerStart(entries: entries, startEntryID: entry.id)
+                } label: {
+                    HistoryCard(entry: entry)
+                }
+                .buttonStyle(PressableStyle())
+                .contextMenu {
+                    Button {
+                        history.toggleFavorite(entry)
+                    } label: {
+                        Label(entry.favorite ? "Remove from Favourites" : "Add to Favourites",
+                              systemImage: entry.favorite ? "heart.slash" : "heart")
+                    }
+                    Button {
+                        onDetails(entry)
+                    } label: {
+                        Label("Details", systemImage: "info.circle")
+                    }
+                    Link(destination: entry.sourceURL) {
+                        Label("Open Original", systemImage: "safari")
+                    }
+                    Button {
+                        UIPasteboard.general.url = entry.sourceURL
+                    } label: {
+                        Label("Copy Link", systemImage: "link")
+                    }
+                    if let caption = entry.caption {
+                        Button {
+                            UIPasteboard.general.string = caption
+                        } label: {
+                            Label("Copy Caption", systemImage: "text.quote")
+                        }
+                    }
+                    Button(role: .destructive) {
+                        withAnimation(.snappy) { history.remove(entry) }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+        .animation(.snappy, value: entries)
+        .fullScreenCover(item: $viewerStart) { start in
+            LibraryViewer(start: start)
+                .environmentObject(history)
+                .environmentObject(settings)
+        }
+    }
+}
+
+struct AccountGroup: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let platform: Platform
+    let entries: [HistoryEntry]
+
+    var itemCount: Int { entries.reduce(0) { $0 + $1.itemCount } }
+}
+
+/// A folder tile: a 2×2 mosaic of the account's latest saves.
+struct AccountFolderCard: View {
+    let group: AccountGroup
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    let thumbs = Array(group.entries.prefix(4))
+                    Grid(horizontalSpacing: 3, verticalSpacing: 3) {
+                        GridRow {
+                            tile(thumbs, 0)
+                            tile(thumbs, 1)
+                        }
+                        GridRow {
+                            tile(thumbs, 2)
+                            tile(thumbs, 3)
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(alignment: .topLeading) {
+                    PlatformBadge(platform: group.platform, compact: true)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(8)
+                }
+                .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(group.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text("\(group.entries.count) save\(group.entries.count == 1 ? "" : "s") · \(group.itemCount) item\(group.itemCount == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func tile(_ thumbs: [HistoryEntry], _ index: Int) -> some View {
+        Group {
+            if thumbs.indices.contains(index) {
+                LocalImage(url: thumbs[index].thumbnailURL)
+            } else {
+                Color.primary.opacity(0.05)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .allowsHitTesting(false)
+    }
+}
+
+/// Everything saved from one account, like an album.
+struct AccountDetailView: View {
+    let group: AccountGroup
+    var onDetails: (HistoryEntry) -> Void
+
+    @EnvironmentObject private var history: HistoryStore
+
+    /// Live entries (so favourites and removals show immediately).
+    private var entries: [HistoryEntry] {
+        let ids = Set(group.entries.map(\.id))
+        return history.entries.filter { ids.contains($0.id) }
+    }
+
+    var body: some View {
+        ScrollView {
+            HStack(spacing: 10) {
+                PlatformBadge(platform: group.platform)
+                Text("\(entries.count) save\(entries.count == 1 ? "" : "s")")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            SavesGrid(entries: entries, onDetails: onDetails)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle(group.name)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

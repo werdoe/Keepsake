@@ -43,7 +43,7 @@ enum SaveDestination: String, CaseIterable, Identifiable {
     var detail: String {
         switch self {
         case .photos: return "Saves to your Photos library."
-        case .files: return "Saves to Files › On My iPhone › Keepsake, sorted by platform."
+        case .files: return "Saves to Files › On My iPhone › Keepsake, in a folder per platform and account."
         case .both: return "Saves to Photos and keeps a copy in Files › On My iPhone › Keepsake."
         }
     }
@@ -62,6 +62,7 @@ final class AppSettings: ObservableObject {
     @Published var destination: SaveDestination { didSet { store.set(destination.rawValue, forKey: Keys.destination) } }
     @Published var wifiOnly: Bool { didSet { store.set(wifiOnly, forKey: Keys.wifiOnly) } }
     @Published var saveToAlbum: Bool { didSet { store.set(saveToAlbum, forKey: Keys.saveToAlbum) } }
+    @Published var albumPerAccount: Bool { didSet { store.set(albumPerAccount, forKey: Keys.albumPerAccount) } }
     @Published var keepOriginalDate: Bool { didSet { store.set(keepOriginalDate, forKey: Keys.keepOriginalDate) } }
     @Published var embedCaption: Bool { didSet { store.set(embedCaption, forKey: Keys.embedCaption) } }
     @Published var shareAutoSave: Bool { didSet { store.set(shareAutoSave, forKey: Keys.shareAutoSave) } }
@@ -76,6 +77,7 @@ final class AppSettings: ObservableObject {
         static let destination = "destination"
         static let wifiOnly = "wifiOnly"
         static let saveToAlbum = "saveToAlbum"
+        static let albumPerAccount = "albumPerAccount"
         static let keepOriginalDate = "keepOriginalDate"
         static let embedCaption = "embedCaption"
         static let shareAutoSave = "shareAutoSave"
@@ -92,6 +94,7 @@ final class AppSettings: ObservableObject {
             Keys.destination: SaveDestination.photos.rawValue,
             Keys.wifiOnly: false,
             Keys.saveToAlbum: false,
+            Keys.albumPerAccount: false,
             Keys.keepOriginalDate: false,
             Keys.embedCaption: true,
             Keys.shareAutoSave: true,
@@ -105,6 +108,7 @@ final class AppSettings: ObservableObject {
         destination = SaveDestination(rawValue: store.string(forKey: Keys.destination) ?? "") ?? .photos
         wifiOnly = store.bool(forKey: Keys.wifiOnly)
         saveToAlbum = store.bool(forKey: Keys.saveToAlbum)
+        albumPerAccount = store.bool(forKey: Keys.albumPerAccount)
         keepOriginalDate = store.bool(forKey: Keys.keepOriginalDate)
         embedCaption = store.bool(forKey: Keys.embedCaption)
         shareAutoSave = store.bool(forKey: Keys.shareAutoSave)

@@ -79,6 +79,11 @@ struct SettingsView: View {
                 Toggle(isOn: $settings.saveToAlbum) {
                     settingLabel("Also add to a “Keepsake” album", "rectangle.stack.badge.plus", .indigo)
                 }
+                if settings.saveToAlbum {
+                    Toggle(isOn: $settings.albumPerAccount) {
+                        settingLabel("One album per account", "person.crop.rectangle.stack.fill", .purple)
+                    }
+                }
             }
         } header: {
             Text("Downloads")
@@ -89,7 +94,9 @@ struct SettingsView: View {
                 Label(network.label, systemImage: network.symbol)
                     .foregroundStyle(settings.wifiOnly && network.kind == .cellular ? .orange : .secondary)
                 if settings.destination.includesPhotos {
-                    Text("Everything saved to Photos appears in Recents. The album is an extra: it also groups Keepsake saves in one place (Photos › Albums › Keepsake). It needs full Photos access.")
+                    Text(settings.albumPerAccount && settings.saveToAlbum
+                         ? "Everything saved to Photos appears in Recents, and also in an album named after the account (e.g. “@username”) inside a Keepsake folder in Photos › Albums. Needs full Photos access."
+                         : "Everything saved to Photos appears in Recents. The album is an extra: it also groups Keepsake saves in one place (Photos › Albums › Keepsake). It needs full Photos access.")
                 }
             }
         }

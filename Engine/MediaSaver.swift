@@ -19,9 +19,22 @@ enum MediaSaver {
         return false
     }
 
+    /// Which album (if any) new saves go into.
+    enum AlbumTarget {
+        /// One "Keepsake" album.
+        case keepsake
+        /// An album per account (e.g. "@username") inside a "Keepsake" folder.
+        case account(String)
+    }
+
     /// Saves a local file to Photos and returns the new asset's identifier.
-    static func save(file: URL, kind: MediaItem.Kind, intoAlbum: Bool, creationDate: Date?) async throws -> String? {
-        let album = intoAlbum ? try? await albumCollection() : nil
+    static func save(file: URL, kind: MediaItem.Kind, album target: AlbumTarget?, creationDate: Date?) async throws -> String? {
+        var album: PHAssetCollection?
+        switch target {
+        case .keepsake: album = try? await albumCollection()
+        case .account(let name): album = try? await accountAlbum(named: name)
+        case nil: album = nil
+        }
         var identifier: String?
         try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetCreationRequest.forAsset()
@@ -36,6 +49,68 @@ enum MediaSaver {
             }
         }
         return identifier
+    }
+
+    // MARK: - Per-account albums (Photos › Albums › Keepsake › @username)
+
+    private static let folderKey = "albumFolderIdentifier"
+    private static let accountAlbumsKey = "accountAlbumIdentifiers"
+
+    private static func keepsakeFolder() async throws -> PHCollectionList? {
+        let defaults = AppGroup.defaults
+        if let id = defaults.string(forKey: folderKey),
+           let existing = PHCollectionList.fetchCollectionLists(withLocalIdentifiers: [id], options: nil).firstObject {
+            return existing
+        }
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "title = %@", Brand.name)
+        if let found = PHCollectionList.fetchCollectionLists(with: .folder, subtype: .any, options: options).firstObject {
+            defaults.set(found.localIdentifier, forKey: folderKey)
+            return found
+        }
+        var placeholderID: String?
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHCollectionListChangeRequest.creationRequestForCollectionList(withTitle: Brand.name)
+            placeholderID = request.placeholderForCreatedCollectionList.localIdentifier
+        }
+        guard let placeholderID else { return nil }
+        defaults.set(placeholderID, forKey: folderKey)
+        return PHCollectionList.fetchCollectionLists(withLocalIdentifiers: [placeholderID], options: nil).firstObject
+    }
+
+    private static func accountAlbum(named rawName: String) async throws -> PHAssetCollection? {
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Other" : rawName
+        let defaults = AppGroup.defaults
+        var known = defaults.dictionary(forKey: accountAlbumsKey) as? [String: String] ?? [:]
+        if let id = known[name],
+           let existing = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [id], options: nil).firstObject {
+            return existing
+        }
+        guard let folder = try await keepsakeFolder() else { return nil }
+        let children = PHCollection.fetchCollections(in: folder, options: nil)
+        var found: PHAssetCollection?
+        children.enumerateObjects { collection, _, stop in
+            if let album = collection as? PHAssetCollection, album.localizedTitle == name {
+                found = album
+                stop.pointee = true
+            }
+        }
+        if let found {
+            known[name] = found.localIdentifier
+            defaults.set(known, forKey: accountAlbumsKey)
+            return found
+        }
+        var placeholderID: String?
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: name)
+            let placeholder = request.placeholderForCreatedAssetCollection
+            placeholderID = placeholder.localIdentifier
+            PHCollectionListChangeRequest(for: folder)?.addChildCollections([placeholder] as NSArray)
+        }
+        guard let placeholderID else { return nil }
+        known[name] = placeholderID
+        defaults.set(known, forKey: accountAlbumsKey)
+        return PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [placeholderID], options: nil).firstObject
     }
 
     /// Photos accepts JPEG/HEIC/PNG directly; anything else (e.g. WebP) is converted to JPEG.

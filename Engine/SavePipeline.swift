@@ -41,7 +41,11 @@ enum SavePipeline {
         progress: @escaping (SaveProgress) -> Void
     ) async throws -> SaveResult {
         let destination = settings.destination
-        let useAlbum = destination.includesPhotos ? try await MediaSaver.prepare(wantsAlbum: settings.saveToAlbum) : false
+        let canUseAlbum = destination.includesPhotos ? try await MediaSaver.prepare(wantsAlbum: settings.saveToAlbum) : false
+        let albumTarget: MediaSaver.AlbumTarget? = canUseAlbum
+            ? (settings.albumPerAccount ? .account(bundle.title) : .keepsake)
+            : nil
+        var filePaths: [String] = []
         let total = items.count
         var saved: [UUID] = []
         var failures: [(UUID, Error)] = []
@@ -68,11 +72,11 @@ enum SavePipeline {
                     }
                 }
                 if destination.includesFiles {
-                    _ = try FileStore.save(file, kind: item.kind, platform: bundle.platform, title: bundle.title,
-                                           index: index, date: bundle.date ?? Date())
+                    filePaths.append(try FileStore.save(file, kind: item.kind, platform: bundle.platform, title: bundle.title,
+                                           index: index, date: bundle.date ?? Date()))
                 }
                 if destination.includesPhotos,
-                   let id = try await MediaSaver.save(file: file, kind: item.kind, intoAlbum: useAlbum,
+                   let id = try await MediaSaver.save(file: file, kind: item.kind, album: albumTarget,
                                                       creationDate: settings.keepOriginalDate ? bundle.date : nil) {
                     assetIDs.append(id)
                 }
@@ -104,7 +108,8 @@ enum SavePipeline {
                 sourceURL: bundle.sourceURL,
                 photoCount: savedItems.filter { $0.kind == .photo }.count,
                 videoCount: savedItems.filter { $0.kind == .video }.count,
-                thumbnailFile: thumb, assetIdentifiers: assetIDs, qualityLabel: bestLabel, sourceKey: bundle.key)
+                thumbnailFile: thumb, assetIdentifiers: assetIDs, qualityLabel: bestLabel, sourceKey: bundle.key,
+                filePaths: filePaths.isEmpty ? nil : filePaths)
             HistoryStore.shared.add(newEntry)
             entry = newEntry
         }
