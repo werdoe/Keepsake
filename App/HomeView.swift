@@ -153,14 +153,7 @@ struct HomeView: View {
                     .opacity(model.linkText.isEmpty ? 0.55 : 1)
                 }
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Platform.allCases) { platform in
-                            PlatformBadge(platform: platform)
-                        }
-                    }
-                }
-                .scrollClipDisabled()
+                PlatformChips()
             }
         }
     }
@@ -378,6 +371,7 @@ struct HomeView: View {
                             LocalImage(url: entry.thumbnailURL)
                                 .frame(width: 96, height: 120)
                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 .overlay(alignment: .bottomLeading) {
                                     PlatformBadge(platform: entry.platform, compact: true)
                                         .background(.ultraThinMaterial, in: Capsule())
@@ -470,8 +464,9 @@ struct MediaTile: View {
     var body: some View {
         Color.clear
             .aspectRatio(min(max(item.aspectRatio, 0.56), 1.2), contentMode: .fit)
-            .overlay { RemoteImage(url: item.thumbnailURL) }
+            .overlay { RemoteImage(url: item.thumbnailURL).allowsHitTesting(false) }
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(alignment: .topLeading) {
                 if item.kind == .video {
                     HStack(spacing: 3) {

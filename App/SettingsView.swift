@@ -77,7 +77,7 @@ struct SettingsView: View {
             }
             if settings.destination.includesPhotos {
                 Toggle(isOn: $settings.saveToAlbum) {
-                    settingLabel("Save into “Keepsake” album", "rectangle.stack.badge.plus", .indigo)
+                    settingLabel("Also add to a “Keepsake” album", "rectangle.stack.badge.plus", .indigo)
                 }
             }
         } header: {
@@ -88,8 +88,8 @@ struct SettingsView: View {
                 Text(settings.destination.detail)
                 Label(network.label, systemImage: network.symbol)
                     .foregroundStyle(settings.wifiOnly && network.kind == .cellular ? .orange : .secondary)
-                if settings.saveToAlbum && settings.destination.includesPhotos {
-                    Text("An album needs full Photos access. If you only allow “Add Photos”, saves go to Recents.")
+                if settings.destination.includesPhotos {
+                    Text("Everything saved to Photos appears in Recents. The album is an extra: it also groups Keepsake saves in one place (Photos › Albums › Keepsake). It needs full Photos access.")
                 }
             }
         }

@@ -156,26 +156,36 @@ struct LibraryView: View {
         .onAppear { history.reload() }
     }
 
+    /// Filter chips that fit the width: names when there's room, otherwise the selected
+    /// platform keeps its name and the others show just their icon.
     private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                chip(title: "All", symbol: "square.grid.2x2", isOn: filter == nil) { filter = nil }
-                ForEach(Platform.allCases) { platform in
-                    chip(title: platform.name, symbol: platform.symbol, isOn: filter == platform) {
-                        filter = filter == platform ? nil : platform
-                    }
+        ViewThatFits(in: .horizontal) {
+            filterRow(compact: false)
+            filterRow(compact: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func filterRow(compact: Bool) -> some View {
+        HStack(spacing: 8) {
+            chip(title: "All", symbol: "square.grid.2x2", isOn: filter == nil, iconOnly: false) { filter = nil }
+            ForEach(Platform.allCases) { platform in
+                chip(title: platform.name, symbol: platform.symbol, isOn: filter == platform,
+                     iconOnly: compact && filter != platform) {
+                    filter = filter == platform ? nil : platform
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            Spacer(minLength: 0)
         }
     }
 
-    private func chip(title: String, symbol: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+    private func chip(title: String, symbol: String, isOn: Bool, iconOnly: Bool, action: @escaping () -> Void) -> some View {
         Button {
             withAnimation(.snappy) { action() }
         } label: {
             Label(title, systemImage: symbol)
+                .labelStyle(iconOnly ? AnyLabelStyle(.iconOnly) : AnyLabelStyle(.titleAndIcon))
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
@@ -193,7 +203,7 @@ private struct HistoryCard: View {
     var body: some View {
         Color.clear
             .aspectRatio(0.8, contentMode: .fit)
-            .overlay { LocalImage(url: entry.thumbnailURL) }
+            .overlay { LocalImage(url: entry.thumbnailURL).allowsHitTesting(false) }
             .overlay(alignment: .bottom) {
                 LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom)
             }
@@ -226,6 +236,8 @@ private struct HistoryCard: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            // Thumbnails are scaled to fill and spill past the card; keep taps inside the card.
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
     }
 }

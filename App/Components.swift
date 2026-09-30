@@ -66,6 +66,37 @@ struct PlatformBadge: View {
     }
 }
 
+/// The supported platforms, laid out to fit the width: full chips if there's room,
+/// otherwise small icons with the names as text.
+struct PlatformChips: View {
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 6) {
+                ForEach(Platform.allCases) { PlatformBadge(platform: $0) }
+            }
+            HStack(spacing: 10) {
+                HStack(spacing: -6) {
+                    ForEach(Platform.allCases) { platform in
+                        Image(systemName: platform.symbol)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(platform.tint)
+                            .frame(width: 26, height: 26)
+                            .background(Color(.systemBackground), in: Circle())
+                            .overlay(Circle().fill(platform.tint.opacity(0.14)))
+                            .overlay(Circle().strokeBorder(Color(.systemBackground), lineWidth: 2))
+                    }
+                }
+                Text(Platform.allCases.map(\.name).joined(separator: " · "))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 /// Type-erased label style so a badge can switch styles.
 struct AnyLabelStyle: LabelStyle {
     private let make: (Configuration) -> AnyView
