@@ -8,6 +8,17 @@ enum SavedMediaRef: Hashable {
     case file(URL)
     /// Nothing saved we can reach (e.g. deleted from Photos); show the Library thumbnail.
     case thumbnail(URL?)
+
+    var isVideo: Bool {
+        switch self {
+        case .asset(let id):
+            return PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject?.mediaType == .video
+        case .file(let url):
+            return ["mp4", "mov", "m4v"].contains(url.pathExtension.lowercased())
+        case .thumbnail:
+            return false
+        }
+    }
 }
 
 /// One swipeable page: a single photo or video from a Library entry.
@@ -36,6 +47,19 @@ struct ViewerStart: Identifiable {
     let startEntryID: UUID
 }
 
+/// Playback settings shared by all pages of the viewer.
+@MainActor
+final class PlaybackControls: ObservableObject {
+    @Published var muted = false
+    @Published var loop = true
+    @Published var speed: Float = 1
+    @Published var slideshow = false
+    /// The player on the page currently shown (for Save Frame).
+    weak var currentPlayer: AVPlayer?
+
+    static let speeds: [Float] = [0.5, 1, 1.25, 1.5, 2]
+}
+
 /// Full-screen, swipeable viewer for everything in (part of) the Library.
 struct LibraryViewer: View {
     let start: ViewerStart
@@ -44,6 +68,7 @@ struct LibraryViewer: View {
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @StateObject private var controls = PlaybackControls()
 
     @State private var pages: [LibraryPage] = []
     @State private var position = 0
@@ -54,8 +79,11 @@ struct LibraryViewer: View {
     @State private var preparingShare = false
     @State private var confirmDelete = false
     @State private var detailEntry: HistoryEntry?
+    @State private var collectEntry: HistoryEntry?
+    @State private var translating = false
     @State private var toast: String?
     @State private var feedbackTick = 0
+    @State private var currentIsVideo = false
 
     private var current: LibraryPage? { pages.indices.contains(position) ? pages[position] : nil }
 
@@ -70,9 +98,13 @@ struct LibraryViewer: View {
 
             TabView(selection: $position) {
                 ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
-                    SavedMediaView(ref: page.ref, fallback: page.entry.thumbnailURL, isActive: index == position)
-                        .tag(index)
-                        .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { chromeVisible.toggle() } }
+                    SavedMediaView(ref: page.ref, fallback: page.entry.thumbnailURL, isActive: index == position,
+                                   controls: controls) {
+                        // A video finished: move on during a slideshow.
+                        if controls.slideshow { advance() }
+                    }
+                    .tag(index)
+                    .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { chromeVisible.toggle() } }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -101,11 +133,23 @@ struct LibraryViewer: View {
         }
         .statusBarHidden(!chromeVisible)
         .onAppear(perform: setUp)
+        .onChange(of: position) { _, _ in updateCurrentKind() }
+        // Slideshow: photos advance every 4 seconds; videos advance when they finish.
+        .task(id: "\(position)-\(controls.slideshow)-\(currentIsVideo)") {
+            guard controls.slideshow, !currentIsVideo else { return }
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if !Task.isCancelled { advance() }
+        }
         .sheet(item: $shareItem) { item in ShareSheet(items: item.items) }
         .sheet(item: $detailEntry) { entry in
             HistoryDetail(entry: entry) { detailEntry = nil }
                 .presentationDetents([.medium, .large])
         }
+        .sheet(item: $collectEntry) { entry in
+            AddToCollectionSheet(entryIDs: [entry.id]) { show("Added to collection") }
+                .presentationDetents([.medium, .large])
+        }
+        .captionTranslation(isPresented: $translating, text: current?.entry.caption ?? "")
         .confirmationDialog("Delete this save?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Remove from Keepsake Library", role: .destructive) { removeCurrent(deleteFromPhotos: false) }
             if let entry = current?.entry, !entry.assetIdentifiers.isEmpty {
@@ -123,10 +167,30 @@ struct LibraryViewer: View {
     private func setUp() {
         pages = LibraryPage.pages(for: start.entries)
         position = pages.firstIndex { $0.entry.id == start.startEntryID } ?? 0
+        updateCurrentKind()
         if photosAccess == .notDetermined, pages.contains(where: { if case .asset = $0.ref { return true } else { return false } }) {
             Task {
                 let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-                await MainActor.run { photosAccess = status }
+                await MainActor.run {
+                    photosAccess = status
+                    updateCurrentKind()
+                }
+            }
+        }
+    }
+
+    private func updateCurrentKind() {
+        currentIsVideo = current?.ref.isVideo ?? false
+    }
+
+    private func advance() {
+        guard !pages.isEmpty else { return }
+        withAnimation(.easeInOut(duration: 0.35)) {
+            if position + 1 < pages.count {
+                position += 1
+            } else {
+                controls.slideshow = false
+                show("End of slideshow")
             }
         }
     }
@@ -148,7 +212,7 @@ struct LibraryViewer: View {
                     dragOffset = value.translation.height
                 }
             }
-            .onEnded { value in
+            .onEnded { _ in
                 if abs(dragOffset) > 140 {
                     dismiss()
                 } else {
@@ -182,6 +246,11 @@ struct LibraryViewer: View {
                 .animation(.snappy, value: position)
             }
             Spacer()
+            circleButton(controls.slideshow ? "pause.fill" : "play.rectangle.fill", label: "Slideshow",
+                         tint: controls.slideshow ? Brand.teal : .white) {
+                controls.slideshow.toggle()
+                show(controls.slideshow ? "Slideshow on" : "Slideshow off")
+            }
             if let entry = liveEntry {
                 circleButton(entry.favorite ? "heart.fill" : "heart", label: "Favourite",
                              tint: entry.favorite ? .pink : .white) {
@@ -212,6 +281,7 @@ struct LibraryViewer: View {
     private var bottomBar: some View {
         if let current {
             VStack(alignment: .leading, spacing: 12) {
+                if currentIsVideo { videoControls }
                 HStack(spacing: 8) {
                     PlatformBadge(platform: current.entry.platform)
                         .background(.ultraThinMaterial, in: Capsule())
@@ -231,13 +301,8 @@ struct LibraryViewer: View {
                 HStack(spacing: 0) {
                     action("square.and.arrow.up", preparingShare ? "Preparing…" : "Share") { share(current) }
                     action("safari", "Original") { openURL(current.entry.sourceURL) }
-                    if let caption = current.entry.caption {
-                        action("text.quote", "Caption") { copy(caption, "Caption copied") }
-                    } else {
-                        action("link", "Link") { copy(current.entry.sourceURL.absoluteString, "Link copied") }
-                    }
-                    action("info.circle", "Details") { detailEntry = liveEntry }
-                    action("trash", "Delete", tint: .red) { confirmDelete = true }
+                    action("rectangle.stack.badge.plus", "Collect") { collectEntry = liveEntry }
+                    moreMenu(current)
                 }
             }
             .padding(16)
@@ -245,6 +310,76 @@ struct LibraryViewer: View {
                 LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
             )
+        }
+    }
+
+    private var videoControls: some View {
+        HStack(spacing: 10) {
+            pill(controls.muted ? "speaker.slash.fill" : "speaker.wave.2.fill", controls.muted ? "Muted" : "Sound") {
+                controls.muted.toggle()
+            }
+            pill("repeat", controls.loop ? "Loop on" : "Loop off", highlighted: controls.loop) {
+                controls.loop.toggle()
+            }
+            Menu {
+                ForEach(PlaybackControls.speeds, id: \.self) { speed in
+                    Button {
+                        controls.speed = speed
+                    } label: {
+                        if speed == controls.speed {
+                            Label(speedLabel(speed), systemImage: "checkmark")
+                        } else {
+                            Text(speedLabel(speed))
+                        }
+                    }
+                }
+            } label: {
+                pillLabel("gauge.with.needle", speedLabel(controls.speed), highlighted: controls.speed != 1)
+            }
+            pill("camera.viewfinder", "Save Frame") { saveFrame() }
+        }
+    }
+
+    private func speedLabel(_ speed: Float) -> String {
+        speed == Float(Int(speed)) ? "\(Int(speed))×" : "\(speed)×"
+    }
+
+    private func pill(_ symbol: String, _ title: String, highlighted: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) { pillLabel(symbol, title, highlighted: highlighted) }
+            .buttonStyle(PressableStyle())
+    }
+
+    private func pillLabel(_ symbol: String, _ title: String, highlighted: Bool = false) -> some View {
+        Label(title, systemImage: symbol)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(highlighted ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(.ultraThinMaterial), in: Capsule())
+    }
+
+    private func moreMenu(_ page: LibraryPage) -> some View {
+        Menu {
+            if let caption = page.entry.caption {
+                Button { copy(caption, "Caption copied") } label: { Label("Copy Caption", systemImage: "text.quote") }
+                if CaptionTranslation.isAvailable {
+                    Button { translating = true } label: { Label("Translate Caption", systemImage: "translate") }
+                }
+            }
+            Button { copy(page.entry.sourceURL.absoluteString, "Link copied") } label: { Label("Copy Link", systemImage: "link") }
+            if currentIsVideo {
+                Button { saveFrame() } label: { Label("Save Frame as Photo", systemImage: "camera.viewfinder") }
+            }
+            Button { detailEntry = liveEntry } label: { Label("Details", systemImage: "info.circle") }
+            Divider()
+            Button(role: .destructive) { confirmDelete = true } label: { Label("Delete…", systemImage: "trash") }
+        } label: {
+            VStack(spacing: 5) {
+                Image(systemName: "ellipsis.circle").font(.title3)
+                Text("More").font(.caption2.weight(.medium))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -283,7 +418,7 @@ struct LibraryViewer: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { toast = message }
         Task {
             try? await Task.sleep(nanoseconds: 1_600_000_000)
-            await MainActor.run { withAnimation { toast = nil } }
+            await MainActor.run { withAnimation { if toast == message { toast = nil } } }
         }
     }
 
@@ -295,6 +430,35 @@ struct LibraryViewer: View {
             await MainActor.run {
                 preparingShare = false
                 shareItem = ShareItem(items: items)
+            }
+        }
+    }
+
+    /// Grabs the frame currently on screen and saves it to Photos.
+    private func saveFrame() {
+        guard let player = controls.currentPlayer, let asset = player.currentItem?.asset else {
+            show("Play the video first")
+            return
+        }
+        let time = player.currentTime()
+        Task {
+            do {
+                let generator = AVAssetImageGenerator(asset: asset)
+                generator.appliesPreferredTrackTransform = true
+                generator.requestedTimeToleranceBefore = .zero
+                generator.requestedTimeToleranceAfter = .zero
+                let (cgImage, _) = try await generator.image(at: time)
+                let image = UIImage(cgImage: cgImage)
+                try await MediaSaver.prepare(wantsAlbum: false)
+                try await PHPhotoLibrary.shared().performChanges {
+                    PHAssetChangeRequest.creationRequestForAsset(from: image)
+                }
+                await MainActor.run {
+                    feedbackTick += 1
+                    show("Frame saved to Photos")
+                }
+            } catch {
+                await MainActor.run { show("Couldn't save the frame") }
             }
         }
     }
@@ -321,6 +485,7 @@ struct LibraryViewer: View {
                         pages = remaining
                         position = min(firstIndex, remaining.count - 1)
                     }
+                    updateCurrentKind()
                     show(deleteFromPhotos ? "Deleted" : "Removed from Library")
                 }
             }
@@ -335,6 +500,8 @@ struct SavedMediaView: View {
     let ref: SavedMediaRef
     let fallback: URL?
     let isActive: Bool
+    @ObservedObject var controls: PlaybackControls
+    var onVideoFinished: () -> Void = {}
 
     @StateObject private var loader = SavedMediaLoader()
     @State private var scale: CGFloat = 1
@@ -345,7 +512,7 @@ struct SavedMediaView: View {
             ZStack {
                 if let player = loader.player {
                     VideoPlayer(player: player)
-                        .onAppear { if isActive { player.play() } }
+                        .onAppear { if isActive { activate(player) } }
                 } else if let image = loader.image {
                     Image(uiImage: image)
                         .resizable()
@@ -374,7 +541,7 @@ struct SavedMediaView: View {
                             .foregroundStyle(.white)
                             .padding(8)
                             .background(.black.opacity(0.5), in: Capsule())
-                            .padding(.bottom, 170)
+                            .padding(.bottom, 200)
                     }
                 }
             }
@@ -386,9 +553,34 @@ struct SavedMediaView: View {
             }
         }
         .onChange(of: isActive) { _, active in
-            if active { loader.player?.play() } else { loader.player?.pause(); scale = 1 }
+            if let player = loader.player {
+                if active { activate(player) } else { player.pause() }
+            }
+            if !active { scale = 1 }
+        }
+        .onChange(of: loader.player) { _, player in
+            if let player, isActive { activate(player) }
+        }
+        .onChange(of: controls.muted) { _, muted in loader.player?.isMuted = muted }
+        .onChange(of: controls.speed) { _, speed in
+            if isActive, let player = loader.player, player.rate != 0 { player.rate = speed }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { note in
+            guard isActive, let player = loader.player, (note.object as? AVPlayerItem) === player.currentItem else { return }
+            if controls.loop && !controls.slideshow {
+                player.seek(to: .zero)
+                player.rate = controls.speed
+            } else {
+                onVideoFinished()
+            }
         }
         .onDisappear { loader.player?.pause() }
+    }
+
+    private func activate(_ player: AVPlayer) {
+        controls.currentPlayer = player
+        player.isMuted = controls.muted
+        player.playImmediately(atRate: controls.speed)
     }
 }
 

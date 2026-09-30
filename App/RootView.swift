@@ -10,10 +10,12 @@ struct RootView: View {
 
     @State private var tab: Tab = .save
     @State private var loginPlatform: Platform?
+    @State private var showBatch = false
+    @StateObject private var quickActions = QuickActionRouter.shared
 
     var body: some View {
         TabView(selection: $tab) {
-            HomeView(selectedTab: $tab, loginPlatform: $loginPlatform)
+            HomeView(selectedTab: $tab, loginPlatform: $loginPlatform, showBatch: $showBatch)
                 .tabItem { Label("Save", systemImage: "arrow.down.circle.fill") }
                 .tag(Tab.save)
             LibraryView(selectedTab: $tab)
@@ -42,22 +44,34 @@ struct RootView: View {
         }
         .onAppear { becameActive() }
         .onOpenURL { url in handle(url) }
+        .sheet(isPresented: $showBatch) { BatchView() }
+        .onReceive(quickActions.$pending) { url in
+            guard let url else { return }
+            quickActions.pending = nil
+            handle(url)
+        }
     }
 
     private func becameActive() {
         history.reload()
+        OfflineQueue.shared.reload()
+        QueueProcessor.shared.start()
+        Task { await QueueProcessor.shared.run() }
         FileStore.collectInbox()
         model.handlePendingPasteSave()
         Task { await AccountSession.syncFromWebView() }
     }
 
-    /// keepsake://save?url=<link>   keepsake://open?url=<link>   keepsake://library   keepsake://paste
+    /// keepsake://save?url=<link>   keepsake://open?url=<link>   keepsake://library   keepsake://paste   keepsake://batch
     private func handle(_ url: URL) {
         guard url.scheme == "keepsake" else { return }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         switch url.host {
         case "library":
             tab = .library
+        case "batch":
+            tab = .save
+            showBatch = true
         case "paste":
             tab = .save
             AppGroup.defaults.set(Date(), forKey: SaveModel.pendingPasteKey)

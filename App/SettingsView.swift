@@ -245,6 +245,11 @@ struct SettingsView: View {
     private var aboutSection: some View {
         Section {
             NavigationLink {
+                StorageView()
+            } label: {
+                settingLabel("Storage", "internaldrive.fill", .gray)
+            }
+            NavigationLink {
                 SupportedLinksView()
             } label: {
                 settingLabel("Supported Links", "link", .gray)
@@ -425,5 +430,143 @@ struct SupportedLinksView: View {
         case .facebook: return "facebook.com/reel/…  /watch?v=…  /share/…  fb.watch/…"
         case .tiktok: return "tiktok.com/@user/video/…  vm.tiktok.com/…"
         }
+    }
+}
+
+// MARK: - Storage
+
+/// How much you've saved, per platform, and what Keepsake keeps on the phone.
+struct StorageView: View {
+    @EnvironmentObject private var history: HistoryStore
+    @ObservedObject private var queue = OfflineQueue.shared
+    @ObservedObject private var collections = CollectionsStore.shared
+    @Environment(\.openURL) private var openURL
+
+    @State private var filesSize: Int64 = 0
+    @State private var thumbnailsSize: Int64 = 0
+    @State private var tempSize: Int64 = 0
+
+    private struct PlatformStat: Identifiable {
+        let platform: Platform
+        let saves: Int
+        let photos: Int
+        let videos: Int
+        var id: String { platform.rawValue }
+    }
+
+    private var stats: [PlatformStat] {
+        Platform.allCases.map { platform in
+            let entries = history.entries.filter { $0.platform == platform }
+            return PlatformStat(platform: platform, saves: entries.count,
+                                photos: entries.reduce(0) { $0 + $1.photoCount },
+                                videos: entries.reduce(0) { $0 + $1.videoCount })
+        }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: 0) {
+                    stat("\(history.entries.count)", "Saves")
+                    stat("\(history.entries.reduce(0) { $0 + $1.photoCount })", "Photos")
+                    stat("\(history.entries.reduce(0) { $0 + $1.videoCount })", "Videos")
+                }
+                .listRowBackground(Color.clear)
+            }
+
+            Section("By Platform") {
+                let maxSaves = max(stats.map(\.saves).max() ?? 1, 1)
+                ForEach(stats) { stat in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Label(stat.platform.name, systemImage: stat.platform.symbol)
+                                .foregroundStyle(stat.platform.tint == .primary ? Color.primary : stat.platform.tint)
+                            Spacer()
+                            Text("\(stat.saves) · \(stat.photos) photos · \(stat.videos) videos")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        GeometryReader { proxy in
+                            Capsule().fill(Color.primary.opacity(0.08))
+                                .overlay(alignment: .leading) {
+                                    Capsule().fill(Brand.gradient)
+                                        .frame(width: max(6, proxy.size.width * CGFloat(stat.saves) / CGFloat(maxSaves)))
+                                }
+                        }
+                        .frame(height: 6)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
+            Section {
+                row("Files app copies", ByteCountFormatter.string(fromByteCount: filesSize, countStyle: .file))
+                row("Library previews", ByteCountFormatter.string(fromByteCount: thumbnailsSize, countStyle: .file))
+                row("Temporary downloads", ByteCountFormatter.string(fromByteCount: tempSize, countStyle: .file))
+                row("Collections", "\(collections.collections.count)")
+                row("Waiting in queue", "\(queue.items.count)")
+                Button("Open Keepsake in Files") {
+                    if let url = URL(string: "shareddocuments://") { openURL(url) }
+                }
+                Button("Clear Temporary Downloads") {
+                    clearTemporary()
+                    measure()
+                }
+                .disabled(tempSize == 0)
+            } header: {
+                Text("On This iPhone")
+            } footer: {
+                Text("Photos and videos saved to Photos count towards your photo library, not Keepsake. Temporary downloads are leftovers from interrupted saves and are safe to clear.")
+            }
+        }
+        .navigationTitle("Storage")
+        .onAppear(perform: measure)
+    }
+
+    private func stat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.title.weight(.bold)).foregroundStyle(Brand.gradient)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func row(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value).foregroundStyle(.secondary)
+        }
+    }
+
+    private func measure() {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let thumbnails = HistoryStore.thumbnailsDirectory
+        let temp = FileManager.default.temporaryDirectory
+        DispatchQueue.global(qos: .userInitiated).async {
+            let f = Self.size(of: documents), t = Self.size(of: thumbnails), tmp = Self.size(of: temp)
+            DispatchQueue.main.async {
+                filesSize = f
+                thumbnailsSize = t
+                tempSize = tmp
+            }
+        }
+    }
+
+    private func clearTemporary() {
+        let temp = FileManager.default.temporaryDirectory
+        for item in (try? FileManager.default.contentsOfDirectory(at: temp, includingPropertiesForKeys: nil)) ?? [] {
+            try? FileManager.default.removeItem(at: item)
+        }
+    }
+
+    private static func size(of folder: URL) -> Int64 {
+        guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]) else { return 0 }
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+            if values?.isRegularFile == true { total += Int64(values?.fileSize ?? 0) }
+        }
+        return total
     }
 }

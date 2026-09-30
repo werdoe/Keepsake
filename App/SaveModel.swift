@@ -80,9 +80,26 @@ final class SaveModel: ObservableObject {
                 if autoSave && earlier == nil { saveAll() }
             } catch {
                 guard !Task.isCancelled, !(error is CancellationError) else { return }
+                if OfflineQueue.isConnectionProblem(KeepsakeError.from(error)) {
+                    queueForLater(text, reason: error)
+                    return
+                }
                 fail(error)
             }
         }
+    }
+
+    /// No connection (or not on Wi-Fi with "Wi-Fi only" on): keep the link and save it later.
+    private func queueForLater(_ link: String, reason: Error) {
+        OfflineQueue.shared.add(link)
+        withAnimation(.snappy) {
+            phase = .idle
+            bundle = nil
+            linkText = ""
+        }
+        let why = (KeepsakeError.from(reason) as? KeepsakeError) == .wifiOnly ? "when you're on Wi-Fi" : "when you're back online"
+        show("Queued. Keepsake will save it \(why).")
+        lightTick += 1
     }
 
     // MARK: - Save

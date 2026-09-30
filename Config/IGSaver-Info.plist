@@ -26,6 +26,35 @@
 	<true/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>doc.on.clipboard</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Save the link on your clipboard</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Paste &amp; Save</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.rai.igsaver.paste</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>square.stack.3d.down.right</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Batch Save</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.rai.igsaver.batch</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>square.stack</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Library</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.rai.igsaver.library</string>
+		</dict>
+	</array>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 </dict>

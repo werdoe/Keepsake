@@ -1,3 +1,4 @@
+import Translation
 import SwiftUI
 
 // MARK: - Animated background
@@ -259,5 +260,27 @@ struct LocalImage: View {
                 KeepsakeMark(size: 36).opacity(0.5)
             }
         }
+    }
+}
+
+// MARK: - Caption translation (iOS 17.4+, uses Apple's on-device translator)
+
+
+extension View {
+    /// Shows iOS's translation card for `text` when `isPresented` is true (does nothing before iOS 17.4).
+    @ViewBuilder
+    func captionTranslation(isPresented: Binding<Bool>, text: String) -> some View {
+        if #available(iOS 17.4, *) {
+            self.translationPresentation(isPresented: isPresented, text: text)
+        } else {
+            self
+        }
+    }
+}
+
+enum CaptionTranslation {
+    static var isAvailable: Bool {
+        if #available(iOS 17.4, *) { return true }
+        return false
     }
 }

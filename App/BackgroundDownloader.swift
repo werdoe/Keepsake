@@ -126,6 +126,14 @@ final class BackgroundDownloader: NSObject, MediaDownloading, URLSessionDownload
 
 /// Receives the "downloads finished" wake-up from iOS.
 final class AppDelegate: NSObject, UIApplicationDelegate {
+    /// Uses our scene delegate so home screen quick actions reach the app.
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = SceneDelegate.self
+        return configuration
+    }
+
     func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String,
                      completionHandler: @escaping () -> Void) {
         BackgroundDownloader.shared.reconnect(identifier: identifier, completion: completionHandler)

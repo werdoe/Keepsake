@@ -8,9 +8,11 @@ struct HomeView: View {
     @Environment(\.openURL) private var openURL
     @Binding var selectedTab: RootView.Tab
     @Binding var loginPlatform: Platform?
+    @Binding var showBatch: Bool
 
+    @ObservedObject private var queue = OfflineQueue.shared
+    @ObservedObject private var processor = QueueProcessor.shared
     @State private var viewerIndex: ViewerSelection?
-    @State private var showBatch = false
     @FocusState private var fieldFocused: Bool
 
     private let columns = [GridItem(.adaptive(minimum: 104), spacing: 10)]
@@ -21,6 +23,9 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header
                     inputCard
+                    if !queue.items.isEmpty {
+                        queueCard.transition(.move(edge: .top).combined(with: .opacity))
+                    }
                     if model.clipboardHasLink && model.phase == .idle && model.linkText.isEmpty {
                         clipboardBanner.transition(.move(edge: .top).combined(with: .opacity))
                     }
@@ -34,7 +39,6 @@ struct HomeView: View {
             .safeAreaInset(edge: .bottom) { bottomBar }
             .toolbar(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) { toastView }
-            .sheet(isPresented: $showBatch) { BatchView() }
             .fullScreenCover(item: $viewerIndex) { selection in
                 if let bundle = model.bundle {
                     MediaViewer(bundle: bundle, startIndex: selection.index)
@@ -154,6 +158,57 @@ struct HomeView: View {
                 }
 
                 PlatformChips()
+            }
+        }
+    }
+
+    private var queueCard: some View {
+        GlassCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    Image(systemName: processor.isRunning ? "arrow.down.circle.dotted" : "clock.arrow.circlepath")
+                        .font(.title3)
+                        .foregroundStyle(Brand.gradient)
+                        .symbolEffect(.pulse, options: .repeating, isActive: processor.isRunning)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(processor.isRunning ? "Saving queued links…" : "\(queue.items.count) link\(queue.items.count == 1 ? "" : "s") waiting")
+                            .font(.subheadline.weight(.semibold))
+                        Text(processor.canRunNow ? "They'll save automatically." :
+                                (settings.wifiOnly ? "Waiting for Wi-Fi." : "Waiting for a connection."))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if !processor.isRunning {
+                        Button("Save Now") { Task { await processor.run() } }
+                            .font(.subheadline.weight(.semibold))
+                            .disabled(!processor.canRunNow)
+                    }
+                }
+                ForEach(queue.items.prefix(4)) { item in
+                    HStack(spacing: 8) {
+                        Image(systemName: item.platform?.symbol ?? "link")
+                            .foregroundStyle(item.platform?.tint ?? .secondary)
+                            .frame(width: 18)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(item.link).font(.caption).lineLimit(1).truncationMode(.middle)
+                            if let error = item.lastError {
+                                Text(error).font(.caption2).foregroundStyle(.orange).lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                        Button {
+                            withAnimation(.snappy) { queue.remove(item) }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove from queue")
+                    }
+                }
+                if queue.items.count > 4 {
+                    Text("and \(queue.items.count - 4) more").font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -533,6 +588,7 @@ struct CaptionCard: View {
 
     @State private var expanded = false
     @State private var pressed = false
+    @State private var translating = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -541,6 +597,16 @@ struct CaptionCard: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
+                if CaptionTranslation.isAvailable {
+                    Button {
+                        translating = true
+                    } label: {
+                        Label("Translate", systemImage: "translate")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .padding(.trailing, 6)
+                }
                 Button {
                     onCopy(caption, "Caption copied")
                 } label: {
@@ -587,5 +653,6 @@ struct CaptionCard: View {
             onCopy(caption, "Caption copied")
         })
         .accessibilityAction(named: "Copy caption") { onCopy(caption, "Caption copied") }
+        .captionTranslation(isPresented: $translating, text: caption)
     }
 }

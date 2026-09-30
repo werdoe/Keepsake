@@ -11,6 +11,7 @@ final class ShareModel: ObservableObject {
     @Published var message = ""
     @Published var successTick = 0
     @Published var previousSave: HistoryEntry?
+    @Published var queued = false
 
     var close: () -> Void = {}
     let settings = AppSettings.shared
@@ -34,6 +35,13 @@ final class ShareModel: ObservableObject {
                 // Ask before saving something you already have.
                 if settings.shareAutoSave && earlier == nil { save() }
             } catch {
+                if OfflineQueue.isConnectionProblem(KeepsakeError.from(error)) {
+                    OfflineQueue.shared.add(text)
+                    queued = true
+                    message = "No connection right now, so it's queued. Keepsake will save it once you're online and open the app."
+                    withAnimation(.snappy) { phase = .failed }
+                    return
+                }
                 fail(error)
             }
         }
@@ -202,9 +210,9 @@ struct ShareCardView: View {
             .padding(.vertical, 8)
         case .failed:
             VStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
+                Image(systemName: model.queued ? "clock.arrow.circlepath" : "exclamationmark.triangle.fill")
                     .font(.system(size: 36))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(model.queued ? Brand.blue : .orange)
                 Text(model.message)
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
