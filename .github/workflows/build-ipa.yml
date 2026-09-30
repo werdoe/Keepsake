@@ -1,0 +1,60 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['README.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build unsigned app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project IGSaver.xcodeproj \
+            -target IGSaver \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build.log | grep -E "error:|warning: .*(deprecated|unavailable)|BUILD (SUCCEEDED|FAILED)" || true
+          test -d build/Release-iphoneos/IGSaver.app
+
+      - name: Package IPA
+        run: |
+          mkdir Payload
+          cp -R build/Release-iphoneos/IGSaver.app Payload/
+          zip -qry IGSaver.ipa Payload
+          ls -lh IGSaver.ipa
+
+      - name: Publish IPA to the builds branch
+        if: always()
+        run: |
+          mkdir out
+          [ -f IGSaver.ipa ] && cp IGSaver.ipa out/
+          [ -f build.log ] && cp build.log out/
+          echo "${GITHUB_SHA}" > out/commit.txt
+          [ -f IGSaver.ipa ] && echo success > out/status.txt || echo failed > out/status.txt
+          cd out
+          git init -q -b builds
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Build ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" builds
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: IGSaver-ipa
+          path: IGSaver.ipa
