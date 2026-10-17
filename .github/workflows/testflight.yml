@@ -24,7 +24,10 @@ jobs:
 
       - name: Build and upload to TestFlight
         env:
-          ALL_SECRETS: ${{ toJSON(secrets) }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: bash Config/testflight/run.sh
 
       - name: Publish the result to the testflight-status branch
