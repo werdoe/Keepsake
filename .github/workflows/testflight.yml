@@ -1,0 +1,34 @@
+name: TestFlight
+
+# Uploads a new Keepsake build to TestFlight (internal testers only).
+# Runs when a commit message contains [testflight], or from the Actions tab (Run workflow).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]')
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and upload to TestFlight
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: bash Config/testflight/run.sh
+
+      - name: Publish the result to the testflight-status branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash Config/testflight/publish.sh
