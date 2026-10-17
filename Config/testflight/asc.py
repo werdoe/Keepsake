@@ -49,6 +49,9 @@ def problem(message):
 
 def find_key(quiet=False):
     raw = json.loads(os.environ.get("ALL_SECRETS") or "{}")
+    for name in ("ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_KEY_P8", "APPLE_TEAM_ID"):
+        if os.environ.get(name):
+            raw[name] = os.environ[name]
     names = sorted(k for k in raw if k.lower() != "github_token")
     (OUT / "secret-names.txt").write_text("\n".join(names) + "\n")
     key_id = issuer = p8 = team = None
@@ -89,7 +92,7 @@ def find_key(quiet=False):
         note("Recognised: " + (", ".join(found) or "nothing"))
     missing = [label for label, val in (("the .p8 key file contents", p8), ("the Key ID", key_id), ("the Issuer ID", issuer)) if not val]
     if missing:
-        problem("Couldn't find " + ", ".join(missing) + " in the repo's Actions secrets.")
+        problem("Couldn't find " + ", ".join(missing) + " in the repo's Actions secrets (expected ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_P8).")
     return key_id, issuer, p8, team
 
 
