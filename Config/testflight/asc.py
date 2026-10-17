@@ -140,7 +140,6 @@ def setup():
 
     apps = asc.get("/v1/apps", limit=200).get("data", [])
     note("API key works.")
-    (OUT / "apps.txt").write_text("".join(f"{a['attributes']['name']}  |  {a['attributes']['bundleId']}\n" for a in apps))
 
     # Register the three bundle IDs (with App Groups) so Xcode and the New App form can use them.
     seed = None
@@ -172,8 +171,9 @@ def setup():
 
     app = next((a for a in apps if a["attributes"]["bundleId"] == BUNDLE), None)
     if not app:
-        others = ", ".join(f"{a['attributes']['name']} ({a['attributes']['bundleId']})" for a in apps) or "none"
-        problem(f"No app in App Store Connect uses bundle ID {BUNDLE} yet. Apps found: {others}. "
+        keepsake_like = [a["attributes"]["bundleId"] for a in apps if "keepsake" in a["attributes"]["name"].lower()]
+        hint = f" (An app named Keepsake exists with bundle ID {', '.join(keepsake_like)}.)" if keepsake_like else ""
+        problem(f"No app in App Store Connect uses bundle ID {BUNDLE} yet.{hint} "
                 "Create it in App Store Connect: Apps, +, New App, choose the bundle ID 'Keepsake - com.rai.igsaver'.")
     note(f"App record: {app['attributes']['name']} ({BUNDLE})")
 
