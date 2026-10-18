@@ -11,8 +11,8 @@ final class QuickActionRouter: ObservableObject {
     func handle(_ item: UIApplicationShortcutItem) {
         let host: String
         switch item.type {
-        case "com.rai.igsaver.paste": host = "paste"
-        case "com.rai.igsaver.batch": host = "batch"
+        case "com.raiyanasaral.keepsake.paste": host = "paste"
+        case "com.raiyanasaral.keepsake.batch": host = "batch"
         default: host = "library"
         }
         pending = URL(string: "keepsake://\(host)")

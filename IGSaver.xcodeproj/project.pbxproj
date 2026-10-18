@@ -437,7 +437,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raiyanasaral.keepsake;
 			};
 			name = Debug;
 		};
@@ -476,7 +476,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raiyanasaral.keepsake;
 			};
 			name = Release;
 		};
@@ -507,7 +507,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
 				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeShare.entitlements;
 				INFOPLIST_FILE = Config/KeepsakeShare-Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.share;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raiyanasaral.keepsake.share;
 			};
 			name = Debug;
 		};
@@ -538,7 +538,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Keepsake needs full access only to keep your saves together in a Keepsake album.";
 				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeShare.entitlements;
 				INFOPLIST_FILE = Config/KeepsakeShare-Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.share;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raiyanasaral.keepsake.share;
 			};
 			name = Release;
 		};
@@ -567,7 +567,7 @@
 				);
 				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeWidgets.entitlements;
 				INFOPLIST_FILE = Config/KeepsakeWidgets-Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raiyanasaral.keepsake.widgets;
 			};
 			name = Debug;
 		};
@@ -596,7 +596,7 @@
 				);
 				CODE_SIGN_ENTITLEMENTS = Config/KeepsakeWidgets.entitlements;
 				INFOPLIST_FILE = Config/KeepsakeWidgets-Info.plist;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rai.igsaver.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raiyanasaral.keepsake.widgets;
 			};
 			name = Release;
 		};

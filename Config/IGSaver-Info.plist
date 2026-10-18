@@ -6,13 +6,13 @@
 	<false/>
 	<key>ALTAppGroups</key>
 	<array>
-		<string>group.com.rai.igsaver</string>
+		<string>group.com.raiyanasaral.keepsake</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.rai.igsaver</string>
+			<string>com.raiyanasaral.keepsake</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>keepsake</string>
@@ -38,7 +38,7 @@
 			<key>UIApplicationShortcutItemTitle</key>
 			<string>Paste &amp; Save</string>
 			<key>UIApplicationShortcutItemType</key>
-			<string>com.rai.igsaver.paste</string>
+			<string>com.raiyanasaral.keepsake.paste</string>
 		</dict>
 		<dict>
 			<key>UIApplicationShortcutItemIconSymbolName</key>
@@ -46,7 +46,7 @@
 			<key>UIApplicationShortcutItemTitle</key>
 			<string>Batch Save</string>
 			<key>UIApplicationShortcutItemType</key>
-			<string>com.rai.igsaver.batch</string>
+			<string>com.raiyanasaral.keepsake.batch</string>
 		</dict>
 		<dict>
 			<key>UIApplicationShortcutItemIconSymbolName</key>
@@ -54,7 +54,7 @@
 			<key>UIApplicationShortcutItemTitle</key>
 			<string>Library</string>
 			<key>UIApplicationShortcutItemType</key>
-			<string>com.rai.igsaver.library</string>
+			<string>com.raiyanasaral.keepsake.library</string>
 		</dict>
 	</array>
 	<key>UIFileSharingEnabled</key>

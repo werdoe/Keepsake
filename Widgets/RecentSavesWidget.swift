@@ -165,7 +165,7 @@ struct RecentSavesView: View {
 @available(iOS 18.0, *)
 struct PasteSaveControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "com.rai.igsaver.pastesave") {
+        StaticControlConfiguration(kind: "com.raiyanasaral.keepsake.pastesave") {
             ControlWidgetButton(action: PasteAndSaveIntent()) {
                 Label("Paste & Save", systemImage: "arrow.down.circle.fill")
             }

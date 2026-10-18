@@ -20,7 +20,7 @@ final class BackgroundDownloader: NSObject, MediaDownloading, URLSessionDownload
     private let lock = NSLock()
 
     private static func identifier(wifiOnly: Bool) -> String {
-        "com.rai.igsaver.downloads." + (wifiOnly ? "wifi" : "any")
+        "com.raiyanasaral.keepsake.downloads." + (wifiOnly ? "wifi" : "any")
     }
 
     private func session(identifier: String) -> URLSession {

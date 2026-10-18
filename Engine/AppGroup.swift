@@ -7,7 +7,7 @@ import Foundation
 /// always update every extension's Info.plist. So we try every place the real name can be
 /// found and use the first group this process can actually open.
 enum AppGroup {
-    static let fallbackIdentifier = "group.com.rai.igsaver"
+    static let fallbackIdentifier = "group.com.raiyanasaral.keepsake"
 
     static let identifier: String = {
         let candidates = candidateIdentifiers()

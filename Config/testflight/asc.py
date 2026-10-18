@@ -20,11 +20,11 @@ import time
 import jwt
 import requests
 
-BUNDLE = "com.rai.igsaver"
+BUNDLE = "com.raiyanasaral.keepsake"
 TARGETS = {
-    "com.rai.igsaver": "Keepsake",
-    "com.rai.igsaver.share": "Keepsake Share",
-    "com.rai.igsaver.widgets": "Keepsake Widgets",
+    "com.raiyanasaral.keepsake": "Keepsake",
+    "com.raiyanasaral.keepsake.share": "Keepsake Share",
+    "com.raiyanasaral.keepsake.widgets": "Keepsake Widgets",
 }
 API = "https://api.appstoreconnect.apple.com"
 
@@ -177,7 +177,7 @@ def setup():
         keepsake_like = [a["attributes"]["bundleId"] for a in apps if "keepsake" in a["attributes"]["name"].lower()]
         hint = f" (An app named Keepsake exists with bundle ID {', '.join(keepsake_like)}.)" if keepsake_like else ""
         problem(f"No app in App Store Connect uses bundle ID {BUNDLE} yet.{hint} "
-                "Create it in App Store Connect: Apps, +, New App, choose the bundle ID 'Keepsake - com.rai.igsaver'.")
+                "Create it in App Store Connect: Apps, +, New App, choose the bundle ID 'Keepsake - com.raiyanasaral.keepsake'.")
     note(f"App record: {app['attributes']['name']} ({BUNDLE})")
 
     groups = asc.get(f"/v1/apps/{app['id']}/betaGroups", limit=50).get("data", [])
