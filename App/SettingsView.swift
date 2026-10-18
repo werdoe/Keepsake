@@ -152,7 +152,7 @@ struct SettingsView: View {
 
     private var accountsSection: some View {
         Section {
-            ForEach([Platform.instagram, .threads, .facebook]) { platform in
+            ForEach([Platform.instagram, .threads, .facebook, .tiktok, .reddit]) { platform in
                 Button {
                     if loggedIn.contains(platform) {
                         Task {
@@ -180,7 +180,7 @@ struct SettingsView: View {
         } header: {
             Text("Accounts")
         } footer: {
-            Text("Optional. Public posts and TikTok work without logging in. Logging in lets Keepsake open private and friends-only posts the way the app would. Consider spare accounts: platforms may flag accounts that download a lot.")
+            Text("Optional. Public posts work without logging in. Logging in lets Keepsake open private and friends-only posts the way the app would. Consider spare accounts: platforms may flag accounts that download a lot.")
         }
     }
 
@@ -339,7 +339,7 @@ struct ShareSetupView: View {
             VStack(spacing: 24) {
                 shareSheetMock
                 VStack(alignment: .leading, spacing: 16) {
-                    guideStep(1, "In Instagram, Threads, Facebook or TikTok, tap Share on a post, reel, video or story.")
+                    guideStep(1, "In Instagram, Threads, Facebook, TikTok or Reddit, tap Share on a post, reel, video or story.")
                     guideStep(2, "Choose “Share to…”, “More” or “Other” to open the iOS share sheet.")
                     guideStep(3, "Scroll the row of apps to the end and tap More.")
                     guideStep(4, "Tap Edit, add Keepsake to Favourites and drag it near the top.")
@@ -429,6 +429,7 @@ struct SupportedLinksView: View {
         case .threads: return "threads.com/@user/post/…  /share/…  /@user"
         case .facebook: return "facebook.com/reel/…  /watch?v=…  /share/…  fb.watch/…"
         case .tiktok: return "tiktok.com/@user/video/…  vm.tiktok.com/…"
+        case .reddit: return "reddit.com/r/…/comments/…  /r/…/s/…  redd.it/…  v.redd.it/…"
         }
     }
 }

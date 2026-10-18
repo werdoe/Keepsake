@@ -6,6 +6,7 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
     case threads
     case facebook
     case tiktok
+    case reddit
 
     var id: String { rawValue }
 
@@ -15,6 +16,7 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .threads: return "Threads"
         case .facebook: return "Facebook"
         case .tiktok: return "TikTok"
+        case .reddit: return "Reddit"
         }
     }
 
@@ -25,6 +27,7 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .threads: return "at"
         case .facebook: return "person.2"
         case .tiktok: return "music.note"
+        case .reddit: return "bubble.left.and.bubble.right"
         }
     }
 
@@ -34,6 +37,7 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .threads: return Color.primary
         case .facebook: return Color(red: 0.10, green: 0.47, blue: 0.95)
         case .tiktok: return Color(red: 0.93, green: 0.18, blue: 0.36)
+        case .reddit: return Color(red: 1.0, green: 0.27, blue: 0.0)
         }
     }
 
@@ -42,7 +46,8 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .instagram: return "Posts, reels, stories, highlights, profiles"
         case .threads: return "Posts and profiles (private ones after logging in)"
         case .facebook: return "Reels, videos and photos (private and friends-only after logging in)"
-        case .tiktok: return "Videos without watermark, photo slideshows, sounds"
+        case .tiktok: return "Videos without watermark, photo slideshows, sounds (private ones after logging in)"
+        case .reddit: return "Videos with sound, galleries, images and GIFs (NSFW and private communities after logging in)"
         }
     }
 
@@ -52,7 +57,8 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .instagram: return URL(string: "https://www.instagram.com/accounts/login/")
         case .threads: return URL(string: "https://www.threads.com/login")
         case .facebook: return URL(string: "https://www.facebook.com/login")
-        case .tiktok: return nil
+        case .tiktok: return URL(string: "https://www.tiktok.com/login")
+        case .reddit: return URL(string: "https://www.reddit.com/login/")
         }
     }
 
@@ -62,12 +68,14 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .threads: return ["threads.com", "threads.net"]
         case .facebook: return ["facebook.com"]
         case .tiktok: return ["tiktok.com"]
+        case .reddit: return ["reddit.com"]
         }
     }
 
     var sessionCookieName: String {
         switch self {
         case .facebook: return "c_user"
+        case .reddit: return "reddit_session"
         default: return "sessionid"
         }
     }
@@ -77,7 +85,8 @@ enum Platform: String, Codable, CaseIterable, Identifiable {
         case .instagram: return "Stories, highlights and private accounts you follow"
         case .threads: return "Private accounts you follow"
         case .facebook: return "Friends-only and private posts, and stories"
-        case .tiktok: return ""
+        case .tiktok: return "Private and friends-only videos, and age-restricted ones"
+        case .reddit: return "NSFW posts and private communities you're in"
         }
     }
 }
@@ -195,7 +204,7 @@ enum KeepsakeError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .unsupportedLink:
-            return "That link isn't from Instagram, Threads, Facebook or TikTok, or it doesn't point to a post."
+            return "That link isn't from Instagram, Threads, Facebook, TikTok or Reddit, or it doesn't point to a post."
         case .loginRequired:
             return "Instagram wants you to be logged in for this. Log in from Settings › Accounts."
         case .loginRequiredFor(let platform):

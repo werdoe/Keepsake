@@ -12,6 +12,7 @@ enum MediaLink: Equatable {
     case threadsProfile(username: String)
     case facebook(URL)
     case tiktok(URL)
+    case reddit(URL)
 
     var platform: Platform {
         switch self {
@@ -19,6 +20,7 @@ enum MediaLink: Equatable {
         case .threadsPost, .threadsProfile: return .threads
         case .facebook: return .facebook
         case .tiktok: return .tiktok
+        case .reddit: return .reddit
         case .redirect(let url): return Self.platform(forHost: url.host) ?? .instagram
         }
     }
@@ -53,6 +55,7 @@ enum MediaLink: Equatable {
         if matches("threads.net") || matches("threads.com") { return .threads }
         if matches("facebook.com") || matches("fb.watch") || matches("fb.com") || matches("fb.me") { return .facebook }
         if matches("tiktok.com") { return .tiktok }
+        if matches("reddit.com") || matches("redd.it") { return .reddit }
         return nil
     }
 
@@ -78,6 +81,9 @@ enum MediaLink: Equatable {
         case .tiktok:
             // tiktok.com/@user/video/ID, /photo/ID, vm.tiktok.com/CODE, tiktok.com/t/CODE
             return parts.isEmpty ? nil : .tiktok(url)
+        case .reddit:
+            // reddit.com/r/sub/comments/ID/..., /r/sub/s/CODE (share), /gallery/ID, redd.it/ID, v.redd.it/ID, i.redd.it/file
+            return parts.isEmpty ? nil : .reddit(url)
         case .facebook:
             let host = url.host?.lowercased() ?? ""
             if host.contains("fb.watch") || host.contains("fb.me") || parts.first == "share" {

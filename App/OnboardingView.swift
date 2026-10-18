@@ -7,7 +7,7 @@ struct OnboardingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let pages: [(title: String, detail: String)] = [
-        ("Keep what you love.", "Save photos, reels, stories and videos from Instagram, Threads, Facebook and TikTok, with no watermarks."),
+        ("Keep what you love.", "Save photos, reels, stories and videos from Instagram, Threads, Facebook, TikTok and Reddit, with no watermarks."),
         ("Share. Saved.", "Tap Share, then Keepsake, in any of those apps. It saves on its own, with no copying and pasting."),
         ("Best quality, your way.", "Choose the best available quality, limit downloads to Wi-Fi, and follow progress in the Dynamic Island."),
     ]

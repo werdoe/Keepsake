@@ -388,7 +388,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Three ways to save").font(.headline)
                 step("square.and.arrow.up", "From the share sheet",
-                     "In Instagram, Threads, Facebook or TikTok tap Share, then Keepsake. It saves on its own.")
+                     "In Instagram, Threads, Facebook, TikTok or Reddit tap Share, then Keepsake. It saves on its own.")
                 step("doc.on.clipboard", "Paste a link", "Copy a link, come back here and tap Paste.")
                 step("square.grid.2x2", "Pick what you want", "Tap an item to preview it. Long-press for audio, caption and link.")
                 step("square.stack.3d.down.right", "Save lots at once", "Tap the stack button to paste many links or grab several accounts' stories.")

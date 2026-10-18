@@ -9,7 +9,8 @@ A personal iPhone app that saves photos and videos from Instagram, Threads and F
 | Instagram | Posts, carousels, reels, stories, highlights, profiles (latest posts), `/share/` links | For stories, highlights and private accounts you follow |
 | Threads | Posts, reposts and quote posts, profiles, `/share/` links | Only for private accounts you follow |
 | Facebook | Reels, videos, photos, `fb.watch` and `/share/` links; stories (experimental) | Only for friends-only or private posts and stories |
-| TikTok | Videos without the watermark (best quality), photo slideshows, sounds; short links | Not needed |
+| TikTok | Videos without the watermark (best quality), photo slideshows, sounds; short links | Optional: private, friends-only, age-restricted |
+| Reddit | Videos with sound, galleries, images, GIFs; share links, redd.it, v.redd.it | Optional: NSFW, private communities |
 
 Logged-in and TikTok pages load in a hidden web view (`Engine/WebCapture.swift`). It captures the media data the site loads for itself and passes TikTok's browser check.
 
@@ -74,6 +75,7 @@ The build ad-hoc signs the app and share extension with their entitlements (`Con
 | Threads | `Engine/ThreadsExtractor.swift` | Media sits under `data.media` in the page's JSON |
 | Facebook | `Engine/FacebookExtractor.swift` | Looks for `browser_native_hd_url` / `progressive_urls` and `representations` |
 | TikTok | `Engine/TikTokExtractor.swift` | Reads `webapp.video-detail.itemInfo.itemStruct` |
+| Reddit | `Engine/RedditExtractor.swift` | Reads `/comments/ID.json`; videos via the DASH manifest (video + audio merged) |
 
 ## Personal use
 

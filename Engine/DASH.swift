@@ -17,13 +17,21 @@ struct DashRepresentation {
 
 enum DASH {
     /// Parses an MPD manifest string into its representations.
-    static func representations(fromManifest xml: String) -> [DashRepresentation] {
+    /// Relative `BaseURL`s (Reddit uses "DASH_720.mp4") are resolved against `relativeTo`.
+    static func representations(fromManifest xml: String, relativeTo base: URL? = nil) -> [DashRepresentation] {
         guard let data = xml.data(using: .utf8) else { return [] }
         let delegate = MPDParserDelegate()
         let parser = XMLParser(data: data)
         parser.delegate = delegate
         parser.parse()
-        return delegate.representations
+        guard let base else { return delegate.representations }
+        return delegate.representations.map { rep in
+            var rep = rep
+            if let url = rep.baseURL, url.scheme == nil {
+                rep.baseURL = URL(string: url.relativeString, relativeTo: base)?.absoluteURL
+            }
+            return rep
+        }
     }
 
     /// Whether this iPhone can decode AV1 in hardware (iPhone 15 Pro and later).

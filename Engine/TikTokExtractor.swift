@@ -11,7 +11,10 @@ enum TikTokExtractor {
         }
         let id = targetID ?? itemID(in: result.finalURL)
         guard let item = item(in: result.json, id: id) else {
-            throw KeepsakeError.server("TikTok didn't return this video. It may be private, removed, or age-restricted.")
+            if Accounts.isLoggedIn(.tiktok) {
+                throw KeepsakeError.server("TikTok didn't return this video. It may be removed, or private to people you don't follow.")
+            }
+            throw KeepsakeError.server("TikTok didn't return this video. If it's private or age-restricted, log in to TikTok in Settings › Accounts and try again.")
         }
 
         let headers = [
