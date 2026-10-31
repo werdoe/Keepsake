@@ -28,6 +28,8 @@ enum MediaFetcher {
                 return try await TikTokExtractor.media(from: url)
             case .reddit(let url):
                 return try await RedditExtractor.media(from: url)
+            case .x(let url):
+                return try await XExtractor.media(from: url)
             case .redirect(let url):
                 guard depth < 2 else { throw KeepsakeError.unsupportedLink }
                 let resolved = try await resolve(url, platform: link.platform)

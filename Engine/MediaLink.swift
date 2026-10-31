@@ -13,6 +13,7 @@ enum MediaLink: Equatable {
     case facebook(URL)
     case tiktok(URL)
     case reddit(URL)
+    case x(URL)
 
     var platform: Platform {
         switch self {
@@ -21,6 +22,7 @@ enum MediaLink: Equatable {
         case .facebook: return .facebook
         case .tiktok: return .tiktok
         case .reddit: return .reddit
+        case .x: return .x
         case .redirect(let url): return Self.platform(forHost: url.host) ?? .instagram
         }
     }
@@ -56,6 +58,8 @@ enum MediaLink: Equatable {
         if matches("facebook.com") || matches("fb.watch") || matches("fb.com") || matches("fb.me") { return .facebook }
         if matches("tiktok.com") { return .tiktok }
         if matches("reddit.com") || matches("redd.it") { return .reddit }
+        if matches("x.com") || matches("twitter.com") || matches("t.co") || matches("fxtwitter.com")
+            || matches("vxtwitter.com") || matches("fixupx.com") || matches("fixvx.com") { return .x }
         return nil
     }
 
@@ -84,6 +88,10 @@ enum MediaLink: Equatable {
         case .reddit:
             // reddit.com/r/sub/comments/ID/..., /r/sub/s/CODE (share), /gallery/ID, redd.it/ID, v.redd.it/ID, i.redd.it/file
             return parts.isEmpty ? nil : .reddit(url)
+        case .x:
+            // x.com/user/status/ID (and twitter.com, fxtwitter/vxtwitter mirrors); t.co short links redirect.
+            if url.host?.lowercased() == "t.co" { return parts.isEmpty ? nil : .redirect(url) }
+            return XExtractor.postID(in: url) == nil ? nil : .x(url)
         case .facebook:
             let host = url.host?.lowercased() ?? ""
             if host.contains("fb.watch") || host.contains("fb.me") || parts.first == "share" {

@@ -152,7 +152,7 @@ struct SettingsView: View {
 
     private var accountsSection: some View {
         Section {
-            ForEach([Platform.instagram, .threads, .facebook, .tiktok, .reddit]) { platform in
+            ForEach([Platform.instagram, .threads, .facebook, .tiktok, .reddit, .x]) { platform in
                 Button {
                     if loggedIn.contains(platform) {
                         Task {
@@ -339,7 +339,7 @@ struct ShareSetupView: View {
             VStack(spacing: 24) {
                 shareSheetMock
                 VStack(alignment: .leading, spacing: 16) {
-                    guideStep(1, "In Instagram, Threads, Facebook, TikTok or Reddit, tap Share on a post, reel, video or story.")
+                    guideStep(1, "In Instagram, Threads, Facebook, TikTok, Reddit or X, tap Share on a post, reel, video or story.")
                     guideStep(2, "Choose “Share to…”, “More” or “Other” to open the iOS share sheet.")
                     guideStep(3, "Scroll the row of apps to the end and tap More.")
                     guideStep(4, "Tap Edit, add Keepsake to Favourites and drag it near the top.")
@@ -430,6 +430,7 @@ struct SupportedLinksView: View {
         case .facebook: return "facebook.com/reel/…  /watch?v=…  /share/…  fb.watch/…"
         case .tiktok: return "tiktok.com/@user/video/…  vm.tiktok.com/…"
         case .reddit: return "reddit.com/r/…/comments/…  /r/…/s/…  redd.it/…  v.redd.it/…"
+        case .x: return "x.com/user/status/…  twitter.com/…  t.co/…"
         }
     }
 }
