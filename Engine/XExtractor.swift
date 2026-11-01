@@ -15,6 +15,10 @@ enum XExtractor {
         if let bundle = try? await fromEmbed(id: id), !bundle.items.isEmpty {
             return bundle
         }
+        // X's embed refuses age-restricted posts; FxTwitter (the open "fixed embeds" service) usually has them.
+        if let bundle = try? await fromFxTwitter(id: id), !bundle.items.isEmpty {
+            return bundle
+        }
         return try await fromPage(id: id)
     }
 
@@ -97,6 +101,46 @@ enum XExtractor {
             integer = (integer - remainder) / radix
         } while integer > 0
         return digits.isEmpty ? integerText : integerText + "." + String(digits.map { chars[$0] })
+    }
+
+    // MARK: - FxTwitter (api.fxtwitter.com)
+
+    private static func fromFxTwitter(id: String) async throws -> MediaBundle {
+        guard let url = URL(string: "https://api.fxtwitter.com/status/\(id)") else { throw KeepsakeError.notFound }
+        var request = URLRequest(url: url)
+        request.setValue("Keepsake/2.6 (iOS; personal media saver)", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await HTTP.anonymous.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var tweet = root["tweet"] as? [String: Any] else { throw KeepsakeError.notFound }
+        if tweet["media"] == nil, let quote = tweet["quote"] as? [String: Any], quote["media"] != nil {
+            tweet["media"] = quote["media"]
+        }
+        let media = tweet["media"] as? [String: Any]
+        let entries = (media?["all"] as? [[String: Any]])
+            ?? ((media?["photos"] as? [[String: Any]] ?? []) + (media?["videos"] as? [[String: Any]] ?? []))
+        let items: [MediaItem] = entries.compactMap { entry in
+            guard let fileURL = HTTP.url(entry["url"]) else { return nil }
+            let width = HTTP.int(entry["width"]), height = HTTP.int(entry["height"])
+            if (entry["type"] as? String) == "photo" {
+                var components = URLComponents(url: fileURL, resolvingAgainstBaseURL: false)
+                components?.queryItems = [URLQueryItem(name: "name", value: "orig")]
+                let original = fileURL.host?.contains("twimg.com") == true ? (components?.url ?? fileURL) : fileURL
+                return MediaItem(kind: .photo, thumbnailURL: fileURL,
+                                 standard: MediaSource(url: original, width: width, height: height), best: nil)
+            }
+            let thumb = HTTP.url(entry["thumbnail_url"]) ?? fileURL
+            return MediaItem(kind: .video, thumbnailURL: thumb,
+                             standard: MediaSource(url: fileURL, width: width, height: height, codec: "avc1"), best: nil)
+        }
+        let author = tweet["author"] as? [String: Any]
+        let created = HTTP.int(tweet["created_timestamp"])
+        let handle = author?["screen_name"] as? String
+        let text = (tweet["text"] as? String).map(cleanText).flatMap { $0.isEmpty ? nil : $0 }
+        return MediaBundle(platform: .x, title: handle.map { "@\($0)" } ?? "X", caption: text,
+                           sourceURL: URL(string: "https://x.com/\(handle ?? "i")/status/\(id)")!, items: items,
+                           key: "x:\(id)", date: created > 0 ? Date(timeIntervalSince1970: TimeInterval(created)) : nil)
     }
 
     // MARK: - Post page (logged in, or when the embed refuses)
